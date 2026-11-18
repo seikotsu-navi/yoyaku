@@ -106,6 +106,7 @@ section.card { background: var(--surface); border: 1px solid var(--border); bord
 <body>
 
 <div class="wrap" id="app"><p class="loading">読み込んでいます…</p></div>
+  <script src="undou.js"></script>
 
 <script>
 (function () {
@@ -316,6 +317,7 @@ section.card { background: var(--surface); border: 1px solid var(--border); bord
       </div>
 
       ${selflogHTML(d)}
+            <section id="undou"></section>
       <section class="card">
         <p class="h">次のご予約</p>
         ${d.upcoming && d.upcoming.length
@@ -342,6 +344,7 @@ section.card { background: var(--surface); border: 1px solid var(--border); bord
       </div>
 
       <p class="foot">${esc(d.updated || '')} 時点</p>`;
+        if (window.UNDOU) window.UNDOU.mount(document.getElementById('undou'), { ask: ask, idt: idToken, demo: !!d.demo });
   }
 
   async function start() {
