@@ -1086,7 +1086,7 @@ function mqSummaryLines(pa){
       lines = [
         '【Web予約・通院中】',
         `希望日時：${when}（${flex}）`,
-        `お名前：${val('reName')}`,
+        `お名前：${val('reName')}`, `ご利用：${radio('plan') === '月額' ? radio('planName') + ' ' + radio('planCount') : radio('plan')}`,
         val('reTel') ? `電話：${val('reTel')}` : null,
         `施術の場所：${place}`,
         `今回：${what}`,
