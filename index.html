@@ -1152,5 +1152,28 @@ function mqSummaryLines(pa){
   go('visit'); sync();
 })();
 </script>
+<script>
+/* 通い方ナビの「このメニューで予約する」から開いたとき（?menu=…）：上にご希望のメニューを出し、「伝えておきたいこと」に入れておく（v1・2026-11-22） */
+(function () {
+  function param(k) {
+    const q = new URLSearchParams(location.search);
+    let v = q.get(k) || '';
+    if (!v && q.get('liff.state')) { try { v = new URLSearchParams(decodeURIComponent(q.get('liff.state')).replace(/^[^?]*\?/, '')).get(k) || ''; } catch (e) { v = ''; } }
+    return v;
+  }
+  const menu = param('menu').replace(/[<>"&]/g, '').slice(0, 40);
+  if (!menu) return;
+  const note = 'ご希望のメニュー：' + menu + '（通い方ナビから）';
+  const box = document.createElement('p');
+  box.className = 'notice info';
+  box.style.margin = '14px 0 0';
+  box.innerHTML = '<b>ご希望のメニュー：' + menu + '</b><br>当日、お体の状態を確かめてから、最終的なメニューを一緒に決めます。';
+  const form = document.getElementById('form');
+  if (form) form.parentNode.insertBefore(box, form);
+  const re = document.getElementById('reNote');
+  if (re && !re.value) re.value = note;
+  if (typeof MQ !== 'undefined' && MQ.pa && !MQ.pa.request) MQ.pa.request = note;
+})();
+</script>
 </body>
 </html>
