@@ -304,7 +304,35 @@ details.raw pre { margin-top: 8px; }
       <label for="reNewNote">いつから・何をして痛めましたか</label>
       <input type="text" id="reNewNote" placeholder="例：昨日ランニング中に左のふくらはぎ">
     </div>
-    <div class="field"><label for="reNote">伝えておきたいこと<span class="opt">任意</span></label>
+    <div class="field" data-required="plan"><span class="q">今ご利用中のもの</span>
+      <div class="chips stack">
+        <label class="chip"><input type="radio" name="plan" value="保険"><span>保険の施術（基本施術・全身ケア・リカバリー）</span></label>
+        <label class="chip"><input type="radio" name="plan" value="学生"><span>学生・医療助成（高校生まで）</span></label>
+        <label class="chip"><input type="radio" name="plan" value="月額"><span>月額プラン（楽トレ・低酸素・食事指導など）</span></label>
+        <label class="chip"><input type="radio" name="plan" value="自費"><span>自費の施術（ピンポイント・トータル・プレミアム）</span></label>
+        <label class="chip"><input type="radio" name="plan" value="事故"><span>交通事故の施術</span></label>
+        <label class="chip"><input type="radio" name="plan" value="わからない"><span>わからない</span></label>
+      </div>
+    </div>
+    <div class="field" id="planBlock" data-required="planName" hidden><span class="q">月額プランの内容</span>
+      <div class="chips stack">
+        <label class="chip"><input type="radio" name="planName" value="施術＋楽トレ"><span>施術＋楽トレ</span></label>
+        <label class="chip"><input type="radio" name="planName" value="施術＋低酸素"><span>施術＋低酸素</span></label>
+        <label class="chip"><input type="radio" name="planName" value="施術＋食事指導"><span>施術＋食事指導</span></label>
+        <label class="chip"><input type="radio" name="planName" value="楽トレプラン"><span>楽トレプラン（施術・楽トレ・食事指導）</span></label>
+        <label class="chip"><input type="radio" name="planName" value="低酸素プラン"><span>低酸素プラン（施術・低酸素・食事指導）</span></label>
+        <label class="chip"><input type="radio" name="planName" value="プレミアムプラン"><span>プレミアムプラン（ぜんぶ）</span></label>
+      </div>
+    </div>
+    <div class="field" id="planBlock2" data-required="planCount" hidden><span class="q">月の回数</span>
+      <div class="chips">
+        <label class="chip"><input type="radio" name="planCount" value="月4回"><span>月4回</span></label>
+        <label class="chip"><input type="radio" name="planCount" value="月8回"><span>月8回</span></label>
+        <label class="chip"><input type="radio" name="planCount" value="月12回"><span>月12回</span></label>
+      </div>
+    </div>
+    <script>document.addEventListener('change',function(e){if(e.target.name==='plan'){var m=e.target.value!=='月額';document.getElementById('planBlock').hidden=m;document.getElementById('planBlock2').hidden=m;}});</script>
+    rv = { type: 're', name: val('reName'),伝えておきたいこと<span class="opt">任意</span></label>
       <input type="text" id="reNote" placeholder="例：前回より楽になった／今日は時間が短めだと助かる">
     </div>
   </div>
