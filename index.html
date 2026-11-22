@@ -332,7 +332,7 @@ details.raw pre { margin-top: 8px; }
       </div>
     </div>
     <script>document.addEventListener('change',function(e){if(e.target.name==='plan'){var m=e.target.value!=='月額';document.getElementById('planBlock').hidden=m;document.getElementById('planBlock2').hidden=m;}});</script>
-    rv = { type: 're', name: val('reName'),伝えておきたいこと<span class="opt">任意</span></label>
+   　<div class="field"><label for="reNote">伝えておきたいこと<span class="opt">任意</span></label>
       <input type="text" id="reNote" placeholder="例：前回より楽になった／今日は時間が短めだと助かる">
     </div>
   </div>
@@ -1093,7 +1093,7 @@ function mqSummaryLines(pa){
         newNote ? `いつ・何をして：${newNote}` : null,
         val('reNote') ? `伝えたいこと：${val('reNote')}` : null
       ];
-      rv = { type: 're', name: val('reName'), tel: val('reTel'), place, what: what + (newNote ? `（${newNote}）` : ''), note: val('reNote') };
+      rv = { type: 're', plan: radio('plan'), planName: radio('planName'), planCount: radio('planCount'), name: val('reName'), tel: val('reTel'), place, what: what + (newNote ? `（${newNote}）` : ''), note: val('reNote') };
     }
     const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
     $('confirmList').innerHTML = rows.map(([k, v, c]) => `<dt>${esc(k)}</dt><dd${c ? ` class="${c}"` : ''}>${esc(v)}</dd>`).join('');
