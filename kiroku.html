@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<script src="config.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>経過の記録（スタッフ用）</title>
+<!-- 経過の記録（スタッフ用） kiroku.html v1.1（2026-11-23）
+     v1.1：会員につながらない方は、会員の一覧から選ぶか「新しい会員として登録」を選んでから記録する
+     施術のときに患者さんに聞いた「今日の痛み・前回のあと・新しく気になる症状・つらい動作」を、タブレットで記録する。
+     予約台帳（Apps Script の Selflog.gs v2.0）の「経過の記録」シートに入り、会員証の「通院の目安」「体の変化」に出る。
+     患者さんの情報を扱うので、評価ナビと同じ「スタッフ用の合言葉」が必要（この端末に保存。評価ナビと共通）。 -->
+<style>
+:root{--bg:#f6f4f1;--surface:#fff;--surface2:#f1eee9;--fg:#222;--sub:#6b6560;--line:#e3ded7;--accent:#e8650f;--accent2:#fff1e6;--red:#c62828;--red2:#fdecea;--ok:#2e7d32;--ok2:#e8f5e9}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1b1a19;--surface:#262422;--surface2:#302d2a;--fg:#f1eeea;--sub:#aaa39b;--line:#3d3935;--accent:#ff8a3d;--accent2:#3a2a1e;--red:#ff6b6b;--red2:#3a2222;--ok:#7bc97f;--ok2:#1f3322}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:"Hiragino Sans","Noto Sans JP",system-ui,sans-serif;font-size:16px;line-height:1.6}
+.wrap{max-width:760px;margin:0 auto;padding:16px 16px 60px}
+header{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:12px}
+h1{font-size:20px;margin:0}
+.date{color:var(--sub);font-size:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:12px}
+.h{font-weight:700;margin:0 0 8px}
+.sub{color:var(--sub);font-size:13px;margin:4px 0 0}
+.list{display:flex;flex-direction:column;gap:8px}
+.pt{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font:inherit;color:inherit;cursor:pointer}
+.pt:active{transform:scale(.99)}
+.pt .t{font-weight:700;min-width:52px;color:var(--sub)}
+.pt .n{font-weight:700;flex:1}
+.tag{font-size:12px;border-radius:999px;padding:2px 10px;background:var(--surface2);color:var(--sub);white-space:nowrap}
+.tag.ok{background:var(--ok2);color:var(--ok)}
+.tag.red{background:var(--red2);color:var(--red)}
+.tag.new{background:var(--accent2);color:var(--accent)}
+.q{margin:14px 0 6px;font-weight:700}
+.q small{font-weight:400;color:var(--sub);margin-left:6px}
+.nums{display:grid;grid-template-columns:repeat(11,1fr);gap:4px}
+.nums button,.opts button{font:inherit;border:1px solid var(--line);background:var(--surface2);color:var(--fg);border-radius:10px;padding:10px 0;cursor:pointer}
+.nums button.on,.opts button.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
+.ends{display:flex;justify-content:space-between;color:var(--sub);font-size:12px;margin-top:2px}
+.opts{display:flex;flex-wrap:wrap;gap:6px}
+.opts button{padding:10px 14px}
+.opts.two button{flex:1}
+input[type=text],input[type=password]{width:100%;font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--fg)}
+.motion{border-top:1px dashed var(--line);padding-top:8px;margin-top:10px}
+.motion input{margin-bottom:6px}
+.btn{display:block;width:100%;font:inherit;font-weight:700;border:0;border-radius:12px;padding:14px;background:var(--accent);color:#fff;cursor:pointer;margin-top:16px}
+.btn.sub{background:var(--surface2);color:var(--fg);border:1px solid var(--line);font-weight:400}
+.btn:disabled{opacity:.5}
+.prev{background:var(--surface2);border-radius:10px;padding:8px 12px;font-size:14px}
+.err{color:var(--red);font-size:14px;margin-top:8px}
+.result{font-size:18px;font-weight:700}
+.result.red{color:var(--red)}
+.back{background:none;border:0;color:var(--accent);font:inherit;padding:0;cursor:pointer}
+.hint{font-size:12px;color:var(--sub)}
+.warn{background:var(--red2);border-radius:10px;padding:10px 12px;margin-top:10px}
+.mlist{max-height:240px;overflow:auto;display:flex;flex-direction:column;gap:4px;margin-top:6px}
+.mlist label{display:flex;gap:8px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface);cursor:pointer}
+.mlist small{color:var(--sub)}
+@media (max-width:420px){.nums{grid-template-columns:repeat(6,1fr)}}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"><p class="sub">読み込んでいます…</p></div>
+<script>
+(() => {
+  const CFG = window.CLINIC_CONFIG || {};
+  const GAS = CFG.gasUrl || 'https://script.google.com/macros/s/AKfycbxzSuZtADnU2dx7UCerXzRdf3JAaXN06e51kO7iij-Ovj-8BKG8KPdpGnC5CqepxBTo/exec';
+  const GROC = ['とても良い', '良い', '少し良い', '変わらない', '少し悪い', '悪い', 'とても悪い'];
+  const $app = document.getElementById('app');
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  // 合言葉は評価ナビ（hyoka.html）と同じ場所に保存する（同じ端末なら入れ直さなくてよい）
+  const getKey = () => { try { return localStorage.getItem('hyoka_key') || ''; } catch (e) { return ''; } };
+  const setKey = (k) => { try { if (k) localStorage.setItem('hyoka_key', k); else localStorage.removeItem('hyoka_key'); } catch (e) {} };
+  let LIST = null, CUR = null, F = {}, PICK = '';
+
+  function ask(params) {
+    return new Promise((ok, ng) => {
+      const cb = 'kr_cb_' + Date.now() + Math.floor(Math.random() * 1000);
+      const q = new URLSearchParams(Object.assign({ action: 'slStaff', key: getKey(), callback: cb }, params));
+      const sc = document.createElement('script');
+      const done = () => { try { delete window[cb]; } catch (e) { window[cb] = undefined; } sc.remove(); };
+      const t = setTimeout(() => { done(); ng(new Error('timeout')); }, 30000);
+      window[cb] = (d) => { clearTimeout(t); done(); ok(d); };
+      sc.onerror = () => { clearTimeout(t); done(); ng(new Error('net')); };
+      sc.src = GAS + '?' + q.toString();
+      document.body.appendChild(sc);
+    });
+  }
+
+  function keyView(msg) {
+    $app.innerHTML = `<header><h1>経過の記録</h1></header>
+      <section class="card"><p class="h">スタッフ用の合言葉</p>
+        <p class="sub">評価ナビと同じ8けたの合言葉です。この端末に保存され、次からは入れなくてよくなります。</p>
+        <input type="password" id="k" inputmode="numeric" autocomplete="off" placeholder="8けたの数字">
+        ${msg ? `<p class="err">${esc(msg)}</p>` : ''}
+        <button class="btn" id="go">はじめる</button></section>`;
+    document.getElementById('go').onclick = () => { const k = document.getElementById('k').value.trim(); if (!k) return; setKey(k); load(); };
+  }
+
+  async function load() {
+    $app.innerHTML = '<p class="sub">今日の予約を読み込んでいます…</p>';
+    if (!getKey()) return keyView('');
+    let d;
+    try { d = await ask({ op: 'list' }); } catch (e) { $app.innerHTML = '<p class="err">つながりませんでした。電波を確かめて、もう一度開いてください。</p>'; return; }
+    if (!d || !d.ok) { if (d && d.reason === 'key') { setKey(''); return keyView('合言葉がちがいます。'); } $app.innerHTML = `<p class="err">${esc((d && d.msg) || '読み込めませんでした。')}</p>`; return; }
+    LIST = d; listView();
+  }
+
+  function listView() {
+    const d = LIST;
+    const items = d.list.map((p, i) => `<button class="pt" data-i="${i}">
+        <span class="t">${esc(p.time)}</span>
+        <span class="n">${esc(p.name)}</span>
+        ${p.linked === false ? '<span class="tag red">会員につながっていません</span>' : ''}
+        ${p.danger ? '<span class="tag red">危険サイン</span>' : ''}
+        ${p.first ? '<span class="tag new">初めての記録</span>' : ''}
+        ${p.done ? `<span class="tag ok">記録済み（痛み${esc(p.done.pain)}）</span>` : ''}
+      </button>`).join('');
+    $app.innerHTML = `<header><h1>経過の記録</h1><span class="date">${esc(d.date)}</span></header>
+      <p class="sub" style="margin:0 0 10px">施術のときに患者さんに聞いて、答えた数を入れます。記録すると予約は「来院済み」になります。</p>
+      <div class="list">${items || '<section class="card"><p class="sub">今日の予約はまだありません。</p></section>'}</div>
+      <button class="btn sub" id="reload">読み込み直す</button>`;
+    $app.querySelectorAll('.pt').forEach((b) => { b.onclick = () => formView(d.list[Number(b.dataset.i)]); });
+    document.getElementById('reload').onclick = load;
+  }
+
+  const nums = (name, val) => `<div class="nums" data-name="${name}">${Array.from({ length: 11 }, (_, i) => `<button type="button" data-v="${i}" class="${val === i ? 'on' : ''}">${i}</button>`).join('')}</div>`;
+
+  function formView(p) {
+    CUR = p; PICK = '';
+    const dn = p.done || {};
+    F = { pain: dn.pain ?? null, groc: dn.groc || '', sign: dn.sign || 'なし', a: dn.acts ? dn.acts[0] : null, b: dn.acts ? dn.acts[1] : null, c: dn.acts ? dn.acts[2] : null };
+    const last = p.last;
+    const motion = (k, i) => `<div class="motion">
+        <input type="text" id="l${k}" maxlength="40" value="${esc(p.motions[i] || '')}" placeholder="つらい動作${'ABC'[i]}（例：靴下をはく）">
+        ${nums(k, F[k])}<div class="ends"><span>0＝まったくできない</span><span>10＝ケガの前と同じにできる</span></div>
+        ${last && last.acts && last.acts[i] !== null && last.acts[i] !== undefined ? `<p class="hint">前回：${esc(last.acts[i])}</p>` : ''}
+      </div>`;
+    $app.innerHTML = `<header><button class="back" id="back">← 一覧へ</button><span class="date">${esc(p.time)}</span></header>
+      <section class="card">
+        <p class="h" style="font-size:18px">${esc(p.name)} 様</p>
+        ${last ? `<div class="prev">前回（${esc(last.date)}）：痛み ${esc(last.pain ?? '—')}　／ これまで ${esc(p.count)} 回の記録</div>` : '<div class="prev">初めての記録です</div>'}
+        ${p.hidden ? '<p class="sub">この方は会員証に記録を出さない設定です（記録はスタッフ用に残ります）。</p>' : ''}
+        ${p.danger ? '<p class="err">予約台帳に危険サインがあります。先に内容を確かめてください。</p>' : ''}
+        ${p.linked === false ? memberPicker(p) : ''}
+
+        ${last ? `<p class="q">前回の施術のあと、体の調子はどうですか？</p>
+        <div class="opts" data-name="groc">${GROC.map((g) => `<button type="button" data-v="${g}" class="${F.groc === g ? 'on' : ''}">${g}</button>`).join('')}</div>` : ''}
+
+        <p class="q">今の痛みを0〜10で言うと？<small>患者さんに答えてもらう</small></p>
+        ${nums('pain', F.pain)}<div class="ends"><span>0＝痛みなし</span><span>10＝考えられる最も強い痛み</span></div>
+
+        <p class="q">前回のあと、新しく気になる症状はありますか？<small>しびれ・力が入らない・熱っぽい・別の場所の痛み など</small></p>
+        <div class="opts two" data-name="sign">${['なし', 'あり'].map((g) => `<button type="button" data-v="${g}" class="${F.sign === g ? 'on' : ''}">${g}</button>`).join('')}</div>
+
+        <p class="q">つらい動作は、どのくらいできますか？<small>空欄の動作は記録しません</small></p>
+        ${motion('a', 0)}${motion('b', 1)}${motion('c', 2)}
+
+        <p class="err" id="err" hidden></p>
+        <button class="btn" id="save">${p.done ? '記録を直す' : '記録する'}</button>
+      </section>`;
+    document.getElementById('back').onclick = listView;
+    $app.querySelectorAll('[data-name]').forEach((box) => {
+      box.querySelectorAll('button').forEach((b) => {
+        b.onclick = () => {
+          const k = box.dataset.name, v = b.dataset.v;
+          const cur = (k === 'groc' || k === 'sign') ? v : Number(v);
+          F[k] = (F[k] === cur && k !== 'sign' && k !== 'pain') ? null : cur;   // 動作と「前回のあと」は、もう一度押すと外せる
+          box.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x.dataset.v === String(F[k])));
+        };
+      });
+    });
+    document.getElementById('save').onclick = save;
+    const ms = document.getElementById('msearch');
+    if (ms) {
+      const draw = () => { document.getElementById('mlist').innerHTML = memberRows(ms.value); bindPick(); };
+      ms.oninput = draw; draw();
+    }
+  }
+
+  // 会員につながらない方：会員の一覧から選ぶ／新しい会員として登録（同じ人が2人に分かれないように）
+  function memberPicker(p) {
+    const first = String(p.name || '').replace(/[\s　]/g, '').slice(0, 1);
+    return `<div class="warn"><p class="h" style="margin:0">この方は会員につながっていません</p>
+      <p class="sub">名前の書き方が違う（漢字・かな・空白など）か、同じ名前の方が2人います。前から来ている方なら、一覧から選んでください。</p>
+      <input type="text" id="msearch" value="${esc(first)}" placeholder="名前の一部・会員番号・電話の下4けたで探す" style="margin-top:6px">
+      <div class="mlist" id="mlist"></div></div>`;
+  }
+  function memberRows(q) {
+    q = String(q || '').replace(/[\s　]/g, '');
+    const all = (LIST && LIST.members) || [];
+    const hit = all.filter((m) => !q || String(m.name).replace(/[\s　]/g, '').includes(q) || String(m.no) === q || String(m.tel4) === q).slice(0, 30);
+    return `<label><input type="radio" name="pick" value="__new" ${PICK === '__new' ? 'checked' : ''}><span><b>新しい会員として登録</b> <small>初めての方</small></span></label>` +
+      hit.map((m) => `<label><input type="radio" name="pick" value="${esc(m.no)}" ${PICK === String(m.no) ? 'checked' : ''}><span>${esc(m.name)} <small>会員番号 ${esc(m.no)}${m.tel4 ? '・電話 …' + esc(m.tel4) : ''}</small></span></label>`).join('') +
+      (hit.length ? '' : '<p class="sub">見つかりません。探す文字を短くしてください。</p>');
+  }
+  function bindPick() { document.querySelectorAll('input[name=pick]').forEach((x) => { x.onchange = () => { PICK = x.value; }; }); }
+
+  async function save() {
+    const err = document.getElementById('err');
+    if (CUR.linked === false && !PICK) { err.textContent = 'この方の会員を一覧から選ぶか、「新しい会員として登録」を選んでください。'; err.hidden = false; return; }
+    if (F.pain === null || F.pain === undefined) { err.textContent = '今の痛み（0〜10）を選んでください。'; err.hidden = false; return; }
+    const btn = document.getElementById('save'); btn.disabled = true; btn.textContent = '記録しています…'; err.hidden = true;
+    const v = (x) => (x === null || x === undefined ? '' : String(x));
+    let d;
+    try {
+      d = await ask({ op: 'save', row: CUR.row, pain: F.pain, groc: F.groc || '', sign: F.sign || 'なし', a: v(F.a), b: v(F.b), c: v(F.c),
+        mno: PICK && PICK !== '__new' ? PICK : '', newm: PICK === '__new' ? '1' : '',
+        la: document.getElementById('la').value.trim(), lb: document.getElementById('lb').value.trim(), lc: document.getElementById('lc').value.trim() });
+    } catch (e) { d = { ok: false, msg: 'つながりませんでした。もう一度押してください。' }; }
+    if (!d || !d.ok) {
+      if (d && d.reason === 'key') { setKey(''); return keyView('合言葉がちがいます。'); }
+      btn.disabled = false; btn.textContent = '記録する'; err.textContent = (d && d.msg) || '記録できませんでした。'; err.hidden = false; return;
+    }
+    $app.innerHTML = `<section class="card"><p class="h">${esc(d.name)} 様の記録を残しました</p>
+      ${d.check ? `<p class="result red">要確認：${esc(d.guide.replace(/^要確認：/, ''))}</p><p class="sub">予約台帳の「危険サイン」に印をつけました。施術の前に、状態を確かめてください。</p>`
+        : d.guide ? `<p class="sub">会員証に出る通院の目安</p><p class="result">${esc(d.guide)}</p>` : '<p class="sub">記録がもう少したまると、会員証に通院の目安が出ます。</p>'}
+      ${d.shown ? '<p class="sub">患者さんの会員証の「体の変化」にも、今日の痛みが入ります。</p>' : ''}
+      <button class="btn" id="next">一覧にもどる</button></section>`;
+    document.getElementById('next').onclick = load;
+  }
+
+  load();
+})();
+</script>
+</body>
+</html>
