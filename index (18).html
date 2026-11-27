@@ -1,0 +1,1173 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8"><script src="config.js"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>千早駅整骨院 Web予約</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap">
+<style>
+/* layout: タップだけで進む縦長ステップ予約。料金表・問診票と同じオレンジ×ブラック。最後にLINEのトークへ文面を自動入力して送る */
+:root {
+  --bg: #f7f7f6; --surface: #ffffff; --surface2: #f2f2f0; --border: #e4e3e0;
+  --fg: #1a1a1a; --fg2: #555550; --fg3: #888882; --ink: #1a1a1a; --on-ink: #ffffff;
+  --accent: #e8650a; --accent-light: #fef0e6; --red: #c0392b; --red-bg: #fdf0ee;
+  --line: #06c755; --sun: #c0392b; --sat: #1a5276;
+  --body: #e9e7e3; --body-line: #b9b6ae;
+  --font: 'Noto Sans JP', -apple-system, 'Hiragino Sans', sans-serif;
+  --radius: 12px; --radius-sm: 8px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #141412; --surface: #1f1f1c; --surface2: #2a2a26; --border: #38382f;
+    --fg: #f0efe8; --fg2: #b8b8aa; --fg3: #7a7a6e; --ink: #0d0d0b; --on-ink: #f0efe8;
+    --accent: #f07530; --accent-light: #2a1c08; --red: #e74c3c; --red-bg: #2a0f0c;
+    --line: #06c755; --sun: #e74c3c; --sat: #5dade2;
+    --body: #34342e; --body-line: #5a5a50; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #141412; --surface: #1f1f1c; --surface2: #2a2a26; --border: #38382f;
+  --fg: #f0efe8; --fg2: #b8b8aa; --fg3: #7a7a6e; --ink: #0d0d0b; --on-ink: #f0efe8;
+  --accent: #f07530; --accent-light: #2a1c08; --red: #e74c3c; --red-bg: #2a0f0c;
+  --line: #06c755; --sun: #e74c3c; --sat: #5dade2;
+  --body: #34342e; --body-line: #5a5a50; color-scheme: dark;
+}
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font);
+  font-size: 15px; line-height: 1.7;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 40px;
+}
+.wrap { max-width: 620px; margin: 0 auto; }
+header.top {
+  background: var(--ink); color: var(--on-ink);
+  margin-left: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  margin-right: calc(-1 * max(16px, env(safe-area-inset-right, 0px)));
+  padding-block: 18px 14px; padding-left: max(20px, env(safe-area-inset-left, 0px)); padding-right: max(20px, env(safe-area-inset-right, 0px));
+  text-align: center;
+}
+header.top .sub { font-size: 11px; letter-spacing: .15em; color: var(--fg3); margin: 0 0 2px; }
+header.top h1 { font-size: 20px; margin: 0; letter-spacing: .08em; }
+header.top .tag { font-size: 11px; color: var(--accent); letter-spacing: .1em; margin: 4px 0 0; }
+
+.progress { display: flex; gap: 6px; margin: 16px 0 6px; }
+.progress span { flex: 1; height: 5px; border-radius: 3px; background: var(--border); }
+.progress span.on { background: var(--accent); }
+.step-label { font-size: 12px; color: var(--fg3); margin: 0 0 12px; font-variant-numeric: tabular-nums; }
+h2 { font-size: 18px; margin: 0 0 4px; text-wrap: balance; }
+.lead { font-size: 13px; color: var(--fg2); margin: 0 0 16px; }
+
+.block { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; display: flex; flex-direction: column; gap: 18px; margin-bottom: 14px; }
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.field > label, .field > .q { font-size: 14px; font-weight: 700; }
+.opt { color: var(--fg3); font-size: 11px; font-weight: 500; margin-left: 6px; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 420px) { .row2 { grid-template-columns: 1fr; } }
+
+input[type=text], input[type=tel], input[type=date] {
+  font: inherit; font-size: 16px; color: var(--fg); background: var(--surface2);
+  border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; width: 100%;
+}
+input:focus-visible { outline: none; border-color: var(--accent); }
+.invalid { box-shadow: 0 0 0 2px var(--red); border-radius: var(--radius-sm); }
+.err { color: var(--red); font-size: 13px; font-weight: 700; margin: 12px 0 0; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chips.stack { flex-direction: column; }
+.chip { position: relative; }
+.chip input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.chip span { display: inline-block; padding: 8px 14px; border: 1.5px solid var(--border); border-radius: 999px; font-size: 14px; background: var(--surface); color: var(--fg2); cursor: pointer; user-select: none; }
+.chips.stack .chip span { display: block; border-radius: var(--radius-sm); }
+.chip input:checked + span { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
+.chip input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* 初診・再診の大ボタン */
+.visit { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.visit .chip span { display: flex; flex-direction: column; align-items: center; gap: 2px; border-radius: var(--radius); padding: 18px 8px; text-align: center; }
+.visit .chip span b { font-size: 17px; color: var(--fg); }
+.visit .chip span small { font-size: 12px; color: var(--fg3); }
+.visit .chip input:checked + span b, .visit .chip input:checked + span small { color: #fff; }
+
+/* 日付 */
+.cal-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.cal-head b { font-size: 16px; font-variant-numeric: tabular-nums; }
+.cal-nav { font: inherit; font-size: 14px; font-weight: 700; min-width: 44px; min-height: 40px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--fg); cursor: pointer; }
+.cal-nav:disabled { opacity: .3; cursor: default; }
+.cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.cal .wh { text-align: center; font-size: 11px; font-weight: 700; color: var(--fg3); padding: 2px 0; }
+.cal .wh.sun, .day.sun .d { color: var(--sun); } .cal .wh.sat, .day.sat .d { color: var(--sat); }
+.day { position: relative; min-width: 0; }
+.day input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.day > span { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 48px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); cursor: pointer; font-variant-numeric: tabular-nums; }
+.day .d { font-size: 16px; font-weight: 700; line-height: 1.1; color: var(--fg); }
+.day .x { font-size: 9px; color: var(--fg3); line-height: 1.2; }
+.day.today > span { border-color: var(--fg3); }
+.day input:disabled + span { opacity: .45; cursor: default; background: var(--surface2); border-color: transparent; }
+.day.out > span { visibility: hidden; }
+.day input:checked + span { background: var(--accent); border-color: var(--accent); }
+.day input:checked + span * { color: #fff !important; }
+.day input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.cal-legend { font-size: 11px; color: var(--fg3); margin: 0; }
+
+.slots-title { font-size: 12px; font-weight: 700; color: var(--fg3); letter-spacing: .05em; margin: 4px 0 0; }
+.slots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+@media (max-width: 360px) { .slots { grid-template-columns: repeat(3, 1fr); } }
+.slots .chip span { display: block; text-align: center; padding: 8px 0; border-radius: var(--radius-sm); font-variant-numeric: tabular-nums; }
+.empty { font-size: 13px; color: var(--fg3); margin: 0; }
+.picked-when { font-size: 15px; font-weight: 700; color: var(--accent); margin: 0; font-variant-numeric: tabular-nums; }
+
+/* 人体図 */
+.bodymap { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.bodyview { text-align: center; }
+.bodyview p { margin: 0; font-size: 12px; font-weight: 700; color: var(--fg2); }
+.bodyview svg { width: 100%; max-width: 170px; height: auto; }
+.bodyview .part { fill: var(--body); stroke: var(--body-line); stroke-width: 1; cursor: pointer; }
+.bodyview .part.sel { fill: var(--accent); stroke: var(--accent); }
+.bodyview .part:focus-visible { outline: none; stroke: var(--fg); stroke-width: 2; }
+.bodyview text { fill: var(--fg3); font-size: 10px; font-family: var(--font); }
+.picked { display: flex; flex-wrap: wrap; gap: 6px; min-height: 30px; }
+.picked .tagp { font-size: 13px; background: var(--accent-light); color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; padding: 2px 10px; cursor: pointer; font-family: inherit; }
+.picked .none { font-size: 13px; color: var(--fg3); }
+
+.notice { border-radius: var(--radius-sm); padding: 10px 12px; font-size: 13px; line-height: 1.7; margin: 0; }
+.notice.warn { background: var(--red-bg); border: 1px solid var(--red); }
+.notice.info { background: var(--accent-light); border: 1px solid var(--accent); }
+.notice b { color: var(--accent); }
+.notice.warn b { color: var(--red); }
+
+.nav { display: flex; gap: 10px; margin-top: 18px; }
+.btn { font: inherit; font-weight: 700; font-size: 15px; border-radius: var(--radius-sm); padding: 13px 18px; cursor: pointer; border: 1.5px solid var(--border); background: var(--surface); color: var(--fg); text-align: center; text-decoration: none; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; flex: 1; }
+.btn.line { background: var(--line); border-color: var(--line); color: #fff; display: block; font-size: 16px; padding: 15px 18px; }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+dl.confirm { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 14px; }
+dl.confirm dt { color: var(--fg3); font-size: 12px; font-weight: 700; padding-top: 2px; white-space: nowrap; }
+dl.confirm dd { margin: 0; min-width: 0; word-break: break-word; }
+dl.confirm dd.when { font-weight: 700; color: var(--accent); font-size: 16px; }
+pre.summary { white-space: pre-wrap; word-break: break-word; font-family: var(--font); font-size: 13px; background: var(--surface2); border-radius: var(--radius-sm); padding: 12px; margin: 0; }
+details.raw summary { font-size: 12px; color: var(--fg3); cursor: pointer; }
+details.raw pre { margin-top: 8px; }
+.hint { font-size: 12px; color: var(--fg3); margin: 0; }
+.soon { margin: 0 0 14px; }
+.soon-btns { display: flex; gap: 8px; margin-top: 8px; }
+.soon-btns .btn { flex: 1; font-size: 14px; padding: 10px 12px; display: block; }
+#dirBox { background: var(--surface2); border-radius: var(--radius-sm); padding: 12px 14px; font-size: 13px; line-height: 1.8; }
+#dirBox h3 { font-size: 14px; margin: 0 0 4px; }
+#dirBox ul { margin: 0; padding-left: 1.2em; }
+#dirBox p { margin: 6px 0 0; color: var(--fg2); }
+.contact { font-size: 13px; color: var(--fg2); text-align: center; margin: 18px 0 0; }
+.contact b { font-variant-numeric: tabular-nums; user-select: all; }
+
+/* ===== 問診票（評価ナビと共通の部品） ===== */
+#mq .pt-wrap{display:flex;flex-direction:column;gap:14px}
+#mq h2{margin:0}
+#mq .plead{margin:0;font-size:13px;color:var(--fg2)}
+#mq .clinic{margin:0;font-size:11px;letter-spacing:.15em;color:var(--fg3)}
+#mq .pprog{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--fg3);font-variant-numeric:tabular-nums}
+#mq .pbar{flex:1;height:5px;border-radius:3px;background:var(--border);overflow:hidden}
+#mq .pbar i{display:block;height:100%;background:var(--accent)}
+#mq .pq{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+#mq .pq>p{margin:0;font-size:14px;font-weight:700}
+#mq .pq.invalid{box-shadow:0 0 0 2px var(--red)}
+#mq .req{color:var(--accent);font-size:11px;font-weight:700;margin-left:6px}
+#mq .opt{color:var(--fg3);font-size:11px;font-weight:500;margin-left:6px}
+#mq .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:480px){#mq .row2{grid-template-columns:minmax(0,1fr)}}
+#mq .pin{font:inherit;font-size:16px;color:var(--fg);background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;width:100%}
+#mq .pin:focus-visible{outline:none;border-color:var(--accent)}
+#mq .pchoice{display:grid;gap:8px}
+#mq .pchoice.wrap{display:flex;flex-wrap:wrap;gap:8px}
+#mq .pchoice.stack{display:flex;flex-direction:column;gap:8px}
+#mq .pchoice.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+#mq .pbtn{font:inherit;font-size:14px;border:1.5px solid var(--border);background:var(--surface);color:var(--fg2);border-radius:var(--radius-sm);padding:10px 12px;cursor:pointer;min-height:46px;text-align:center}
+#mq .pchoice.stack .pbtn{text-align:left}
+#mq .pbtn.chip{border-radius:999px;padding:8px 14px;min-height:40px}
+#mq .pbtn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
+#mq .pbtn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
+#mq .pbtn:focus-visible,#mq .part:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#mq .pnav{display:flex;gap:10px;margin-top:4px}
+#mq .pnav .pbtn{flex:1;min-height:50px;font-size:15px}
+#mq .perr{margin:0;color:var(--red);font-weight:700;font-size:13px}
+#mq .nrs{display:grid;grid-template-columns:repeat(11,minmax(0,1fr));gap:4px}
+#mq .nrs .pbtn{padding:8px 0;font-variant-numeric:tabular-nums}
+@media (max-width:420px){#mq .nrs{grid-template-columns:repeat(6,minmax(0,1fr))}}
+#mq .nrs-l{display:flex;justify-content:space-between;font-size:11px;color:var(--fg3)}
+#mq .bodymap{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#mq .bodyview{text-align:center}
+#mq .bodyview p{margin:0;font-size:12px;font-weight:700;color:var(--fg2)}
+#mq .bodyview svg{width:100%;max-width:170px;height:auto}
+#mq .part{fill:var(--body);stroke:var(--body-line);stroke-width:1;cursor:pointer}
+#mq .part.sel{fill:var(--accent);stroke:var(--accent)}
+#mq svg text{fill:var(--fg3);font-size:10px;font-family:var(--font)}
+#mq .picked{display:flex;flex-wrap:wrap;gap:6px;min-height:28px}
+#mq .tagp{font:inherit;font-size:13px;background:var(--accent-light);color:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:2px 10px;cursor:pointer}
+#mq .picked .none{font-size:13px;color:var(--fg3)}
+#mq .handrow{display:flex;flex-direction:column;align-items:center}
+#mq .hand{width:100%;max-width:200px;height:auto}
+#mq .consent-text{background:var(--surface2);border-radius:var(--radius-sm);padding:10px 12px;font-size:13px;line-height:1.8}
+#mq .consent-text ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:4px}
+#mq .agree{font:inherit;font-size:14px;font-weight:700;display:flex;gap:10px;align-items:center;text-align:left;background:none;border:0;color:var(--fg);padding:6px 0;cursor:pointer}
+#mq .agree .box{width:24px;height:24px;border:2px solid var(--border);border-radius:5px;display:grid;place-items:center;flex:0 0 auto;color:#fff;font-size:14px}
+#mq .agree[aria-pressed="true"] .box{background:var(--accent);border-color:var(--accent)}
+#mq .subtle-btn{font:inherit;font-size:11px;color:var(--fg3);background:none;border:0;padding:4px 0;text-align:left;cursor:pointer;text-decoration:underline}
+#mq .pnote{background:var(--red-bg);border:1px solid var(--red);border-radius:var(--radius-sm);padding:10px 12px;font-size:13px}
+#mq .small{font-size:12px;color:var(--fg3)}
+@media (prefers-reduced-motion: no-preference) { .step { animation: fade .2s ease; } @keyframes fade { from { opacity: .4 } to { opacity: 1 } } }
+/* 予約台帳で埋まっている時間 */
+.slots .chip.busy span { text-decoration: line-through; opacity: .4; cursor: default; }
+.busy-note { font-size: 12px; color: var(--fg3); margin: 8px 0 0; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<header class="top">
+  <p class="sub">千早駅整骨院</p>
+  <h1>Web予約</h1>
+  <p class="tag">タップで選んで、LINEで送るだけ</p>
+</header>
+
+<form id="form" novalidate>
+<div class="progress" id="progress" aria-hidden="true"></div>
+<p class="step-label" id="stepLabel"></p>
+
+<!-- ご来院は -->
+<section class="step" data-step="visit">
+  <h2>当てはまる方を選んでください</h2>
+  <p class="lead">最後のご来院から1か月以上あいた方は、初めての方と同じく問診票の入力をお願いしています。</p>
+  <div class="block">
+    <div class="field" data-required="visit">
+      <div class="visit">
+        <label class="chip"><input type="radio" name="visit" id="v-new" value="初診"><span><b>初めての方・<br>久しぶりの方</b><small>1か月以上あいた方</small><small>問診票つき・約5分（来院時にタブレットでの記入も可）</small></span></label>
+        <label class="chip"><input type="radio" name="visit" id="v-re" value="再診"><span><b>通院中の方</b><small>最後の来院から<br>1か月以内</small><small>約1分</small></span></label>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 日時 -->
+<section class="step" data-step="when" hidden>
+  <h2>ご希望の日時</h2>
+  <p class="lead">空き状況を確認して、LINEで確定のご連絡をします。</p>
+  <div class="notice info soon">
+    <b>Web予約は、今から1時間後以降の時間から選べます。</b><br>それより早くご来院したい方は、LINEのトークかお電話で直接ご連絡ください。
+    <div class="soon-btns"><a class="btn line sm" id="soonLine" href="#" target="_blank" rel="noopener">LINEで連絡する</a><a class="btn sm" id="soonTel" href="#">電話する</a></div>
+  </div>
+  <div class="block">
+    <div class="field" data-required="date">
+      <span class="q">日にち</span>
+      <div class="cal-head"><button type="button" class="cal-nav" id="calPrev" aria-label="前の月">‹</button><b id="calTitle"></b><button type="button" class="cal-nav" id="calNext" aria-label="次の月">›</button></div>
+      <div class="cal" id="days"></div>
+      <p class="cal-legend">薄い日はお休み、または受付が終わった日です。</p>
+    </div>
+    <div class="field" data-required="time">
+      <span class="q">時間</span>
+      <div id="slots"><p class="empty">先に日にちを選んでください。</p></div>
+      <p class="busy-note" id="busyNote" hidden></p>
+    </div>
+    <div class="field" data-required="flex">
+      <span class="q">ほかの時間になった場合</span>
+      <div class="chips stack">
+        <label class="chip"><input type="radio" name="flex" id="fx1" value="この時間のみ"><span>この時間のみ希望</span></label>
+        <label class="chip"><input type="radio" name="flex" id="fx2" value="前後1時間ならOK"><span>前後1時間ならOK</span></label>
+        <label class="chip"><input type="radio" name="flex" id="fx3" value="別の日時でもOK"><span>別の日時でもOK（相談したい）</span></label>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 再診：お名前と今日のご相談 -->
+<section class="step" data-step="re" hidden>
+  <h2>お名前と今回のご相談</h2>
+  <div class="block">
+    <div class="row2">
+      <div class="field" data-required="reName"><label for="reName">お名前</label><input type="text" id="reName" autocomplete="name" placeholder="千早 太郎"></div>
+      <div class="field"><label for="reTel">電話番号<span class="opt">任意</span></label><input type="tel" id="reTel" autocomplete="tel" inputmode="tel" placeholder="090-1234-5678"></div>
+    </div>
+    <div class="field" data-required="reWhat"><span class="q">今回は</span>
+      <div class="chips stack">
+        <label class="chip"><input type="radio" name="reWhat" id="rw1" value="前回と同じ症状・いつもの施術"><span>前回と同じ症状・いつもの施術</span></label>
+        <label class="chip"><input type="radio" name="reWhat" id="rw2" value="別の場所が痛い・新しいケガ"><span>別の場所が痛い・新しいケガ</span></label>
+        <label class="chip"><input type="radio" name="reWhat" id="rw3" value="メニューを変えたい・相談したい"><span>メニューを変えたい・相談したい</span></label>
+      </div>
+    </div>
+    <div class="field" data-required="reArea"><span class="q">今回、施術してほしい場所（いくつでも）</span>
+      <div class="chips" id="reAreas"></div>
+      <div class="chips" id="reSide" aria-label="左右"></div>
+      <input type="text" id="reAreaOther" placeholder="細かい場所（例：右ひざの内側／腰の左側）">
+    </div>
+    <div class="field" id="reNewBlock" hidden>
+      <label for="reNewNote">いつから・何をして痛めましたか</label>
+      <input type="text" id="reNewNote" placeholder="例：昨日ランニング中に左のふくらはぎ">
+    </div>
+    <div class="field"><label for="reNote">伝えておきたいこと<span class="opt">任意</span></label>
+      <input type="text" id="reNote" placeholder="例：前回より楽になった／今日は時間が短めだと助かる">
+    </div>
+  </div>
+</section>
+
+<!-- 初診・久しぶりの方：問診票（Web予約に続けて入力） -->
+<section class="step" data-step="intake" hidden>
+  <div id="mq"></div>
+</section>
+
+<!-- 確認 -->
+<section class="step" data-step="confirm" hidden>
+  <h2>この内容で送ります</h2>
+  <p class="lead" id="sendLead">下の緑のボタンを押すと、当院のLINEトークに予約内容が送られます。</p>
+  <div class="block">
+    <dl class="confirm" id="confirmList"></dl>
+    <div id="dirBox" hidden></div>
+    <details class="raw"><summary>送信される文面を見る</summary><pre class="summary" id="summary"></pre></details>
+  </div>
+  <a class="btn line" id="lineBtn" href="#" target="_blank" rel="noopener">LINEで予約を送る</a>
+  <p class="err" id="sendErr" hidden></p>
+  <div class="nav" id="copyRow">
+    <button type="button" class="btn" id="copyBtn" style="flex:1">うまく送れない時：内容をコピー</button>
+  </div>
+  <p class="hint" id="copyMsg" hidden></p>
+  <p class="hint" style="margin-top:12px">予約は、当院からの返信をもって確定です。</p>
+</section>
+
+<p class="err" id="errMsg" hidden></p>
+<div class="nav" id="nav">
+  <button type="button" class="btn" id="backBtn" hidden>戻る</button>
+  <button type="submit" class="btn primary" id="nextBtn">次へ</button>
+</div>
+</form>
+
+<section id="done" hidden>
+  <div class="block" style="margin-top:18px;text-align:center">
+    <h2>予約を送信しました</h2>
+    <p class="lead" style="margin:0">空き状況を確認して、このトークでご連絡します。返信をもって予約確定です。</p>
+  </div>
+</section>
+
+<p class="contact">お電話でのご予約 <b id="telText"></b></p>
+</div>
+
+<script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
+<script>
+/* ===== 問診票の共通部品（Web予約ページと評価ナビで同じものを使う）=====
+   MQ.opts.mode: "tablet"（院内タブレット・署名あり）／"remote"（Web予約の続き・署名は来院時）／"sign"（取り込み後の署名だけ） */
+const MQ = {pa:null, pstep:0, perr:"", perrKeys:[], opts:{mode:"tablet", rerender:()=>{}}};
+function mqFreshPA(){ return {parts:[],motion:[],safety:[],expect:[],fingers:[],avoid:[]}; }
+MQ.pa = mqFreshPA();
+const mqEsc = s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+const BODY = {
+  front:[['頭・顔','e',60,22,13,16,''],['首','r',53,38,14,10,''],['肩','e',38,54,10,7,'L'],['胸','r',44,50,32,26,''],['お腹','r',44,76,32,28,''],['股関節','r',44,104,32,18,''],['上腕','r',24,60,12,34,'L'],['肘','e',30,100,6,6,'L'],['手首','r',23,106,12,30,'L'],['手・指','e',28,146,7,9,'L'],['太もも','r',44,122,15,46,'L'],['膝','e',51,174,7,7,'L'],['すね','r',45,181,13,42,'L'],['足首・足','e',51,232,8,8,'L']],
+  back:[['後頭部','e',60,22,13,16,''],['首の後ろ','r',53,38,14,10,''],['肩・肩甲骨','e',38,54,10,7,'L'],['背中','r',44,50,32,26,''],['腰','r',44,76,32,28,''],['お尻','r',44,104,32,18,''],['上腕','r',24,60,12,34,'L'],['肘','e',30,100,6,6,'L'],['手首','r',23,106,12,30,'L'],['手・指','e',28,146,7,9,'L'],['太もも裏','r',44,122,15,46,'L'],['膝裏','e',51,174,7,7,'L'],['ふくらはぎ','r',45,181,13,42,'L'],['かかと','e',51,232,8,8,'L']]
+};
+const PART2REGION = {"首":"neck","首の後ろ":"neck","後頭部":"neck","肩":"shoulder","肩・肩甲骨":"shoulder","上腕":"shoulder","肘":"elbow","手首":"elbow","手・指":"elbow","腰":"lumbar","お尻":"lumbar","太もも裏":"lumbar","股関節":"hip","太もも":"hip","膝":"knee","膝裏":"knee","すね":"knee","足首・足":"ankle","かかと":"ankle","ふくらはぎ":"ankle"};
+const partRegion = n=>PART2REGION[String(n).replace(/^[右左]/,"")]||null;
+const FEEL = [["1","じっとしていても強く痛む・我慢できない"],["3","動かすと強く痛む・動かせない"],["4","我慢できるが動かすと痛い"],["5","時々痛い・重い・だるい"],["6","痛みはないが不快・体を見てほしい"]];
+const MOTION = ["歩く","走る・運動","座る・立ち上がる","前かがみ・反る","腕を上げる","首を回す","寝返り・朝","しびれがある"];
+const SINCE = [["d1","今日・昨日",1],["d7","1週間以内",7],["d14","2週間以内",14],["d30","1か月以内",30],["d90","1〜3か月",90],["d999","3か月以上",999],["dx","わからない",null]];
+const HOW = ["ひねった","打った・ぶつけた","転んだ・落ちた","重い物を持った・急に伸ばした","使いすぎ","きっかけはない"];
+const TRAUMA_HOW = HOW.slice(0,4);
+const WHERE = ["家で・日常生活","運動・部活中","仕事・通勤中","交通事故","その他"];
+const SAFETY = ["特になし","ペースメーカー","妊娠中","体内に金属","治療中の病気・服薬","アレルギー"];
+const EXPECT = ["痛みを取りたい","再発しない体にしたい","ゆがみを整えたい・メンテナンス","スポーツのパフォーマンスを上げたい","ダイエット・お腹まわり","疲れ・睡眠・自律神経"];
+const SOURCE = ["Instagram","Google","ご紹介","看板・通りがかり","その他"];
+const SEX = ["男性","女性"];
+const INS = [["shaho","社会保険（協会けんぽ・健康保険組合・共済）"],["kokuho","国民健康保険"],["kouki","後期高齢者医療"],["seiho","生活保護"],["none","保険に入っていない・わからない"]];
+const INS_REL = [["self","本人"],["family","家族（扶養されている）"]];
+/* 施術のご希望：「いちばん大事にしたいこと」からメニューを案内する */
+const GOAL = [
+  ["quick","まずは今の痛みを、早く楽にしたい"],
+  ["whole","痛いところだけでなく、体全体のバランスも整えたい"],
+  ["return","スポーツや仕事に、できるだけ早く戻りたい"],
+  ["prevent","くり返さない体づくりまで、しっかり取り組みたい"],
+  ["diet","体重や食事も含めて、体を変えていきたい"],
+  ["short","短い時間で、気になるところだけ見てほしい"],
+  ["consult","話を聞いてから決めたい"]
+];
+const PRESS = ["弱め","ふつう","しっかりめ","おまかせ"];
+const AVOID = ["特になし","強く押されるのが苦手","うつ伏せの姿勢がつらい","電気が苦手","テーピング・湿布でかぶれやすい","運動は自信がない"];
+const PACE = ["週2回以上","週1回くらい","月2〜3回","月1回くらい","まだわからない"];
+const PT_RF = [
+  {id:"rf_ca",q:"これまでに、がんと診断されたことがありますか"},
+  {id:"rf_st",q:"ステロイド（副腎皮質ホルモン）の飲み薬を長く使っていますか"},
+  {id:"rf_tr",q:"交通事故や高い所からの転落など、大きなけががありましたか"},
+  {id:"rf_br",q:"痛いところに、あざやすり傷がありますか"},
+  {id:"rf_ce",q:"お尻のまわりや股のしびれ、尿や便が出にくい・もれる、といったことはありますか"},
+  {id:"rf_pr",q:"手や足に力が入りにくく、だんだん悪くなっていますか"},
+  {id:"rf_sy",q:"熱がある、理由がわからず体重が減った、じっとしていても強く痛む、のどれかがありますか"}
+];
+const SSHQ = ["太ももから、ふくらはぎやすねにかけて、しびれや痛みがある","しばらく歩くと、しびれや痛みが強くなり、休むと楽になる","しばらく立っていると、太ももからふくらはぎやすねにかけて、しびれや痛みが出る","前かがみになると、しびれや痛みが楽になる","両脚にしびれがある","両方の足の裏にしびれがある","お尻のまわりにしびれが出る","しびれはあるが、痛みはない","お尻のまわりに、焼けるような感じが出る","歩いていると、尿が出そうになる"];
+const PT_EXTRA = {
+  neck:[{k:"n_arm",q:"腕や手に、痛みやしびれがありますか"},{k:"n_clumsy",q:"箸やボタンなど、手先の細かい動作がしにくくなりましたか"},{k:"n_gait",q:"歩くときにふらつく、足がもつれることがありますか"},{k:"n_head",q:"首の痛みと一緒に、頭痛がありますか"}],
+  shoulder:[{k:"s_night",q:"夜、肩の痛みで目が覚めることがありますか"},{k:"s_lift",q:"腕を横から上げる途中で痛みますか"},{k:"s_dm",q:"糖尿病、または甲状腺の病気がありますか"},{k:"s_other",q:"反対側の肩も、以前に動かなくなったことがありますか"},{k:"s_disl",q:"肩が外れた（脱臼した）ことがありますか"}],
+  elbow:[{k:"e_lat",q:"ひじの外側が痛みますか（物をつかむ・持ち上げると痛い）"},{k:"e_shake",q:"手がしびれたとき、手を振ると楽になりますか"},{k:"e_night",q:"夜中や明け方に、手のしびれで目が覚めますか"},{k:"e_thumb",q:"手首の親指側が痛みますか"}],
+  hip:[{k:"h_groin",q:"脚のつけ根（股）が痛みますか"},{k:"h_sock",q:"靴下をはく、足の爪を切る動作がしにくいですか"}],
+  knee:[{k:"k_give",q:"ひざがガクッと崩れることがありますか"},{k:"k_lock",q:"ひざが引っかかって、伸ばせなくなることがありますか"},{k:"k_stairs",q:"しゃがむときや階段で、ひざのお皿のまわりが痛みますか"},{k:"k_swell",q:"けがのあと、すぐにひざが腫れましたか"}],
+  ankle:[{k:"f_heel",q:"朝起きて最初の一歩で、かかとが痛みますか"},{k:"f_snap",q:"ふくらはぎやかかとの後ろを、けられたような感じや「ブチッ」という音がありましたか"},{k:"f_twist",q:"足首を内側にひねりましたか"}]
+};
+const FINGERS = [["f1","親指"],["f2","人差し指"],["f3","中指"],["f4","薬指"],["f5","小指"],["palm","手のひら"],["dorsum","手の甲"]];
+const REGION_JP = {neck:"首",shoulder:"肩",elbow:"ひじ・手",lumbar:"腰・脚",hip:"脚のつけ根",knee:"ひざ",ankle:"足首・足"};
+
+function ageOf(b){ if(!b) return null; const d=new Date(b),n=new Date(); if(isNaN(d)) return null; let a=n.getFullYear()-d.getFullYear(); if(n.getMonth()<d.getMonth()||(n.getMonth()===d.getMonth()&&n.getDate()<d.getDate())) a--; return a>=0&&a<120?a:null; }
+const isMinor = pa=>{ if(pa.adult==="y") return false; if(pa.adult==="n") return true; const a=ageOf(pa.birth); return a!==null&&a<18; };   /* 成年年齢は18歳（民法） */
+function sinceDaysOf(pa){ const s=SINCE.find(x=>x[0]===pa.since); return s?s[2]:null; }
+function phaseOf(pa){ const d=sinceDaysOf(pa); if(d==null) return null; return d<=30?"a":d<=90?"s":"c"; }
+const mainPartOf = pa=> pa.main || ((pa.parts||[]).length===1?pa.parts[0]:null);
+const ptRegionOf = pa=>{ const m=mainPartOf(pa); return m?partRegion(m):null; };
+function sshqScoreOf(pa){ const a=SSHQ.map((_,i)=>pa["q"+(i+1)]); if(a.some(v=>v!=="y"&&v!=="n")) return null; const s1=a.slice(0,4).filter(v=>v==="y").length,s2=a.slice(4).filter(v=>v==="y").length; return {s1,s2,pos:s1===4||(s1>=2&&s2>=3)}; }
+
+/* ---- ページ構成 ---- */
+function mqPages(){
+  const m=MQ.opts.mode, P=MQ.pa;
+  if(m==="sign") return ["signwelcome","consent","done"];
+  const body=["about","area","state","onset","safety","care"];
+  if(ptRegionOf(P)) body.push("region");
+  body.push("hope","consent");
+  if(m==="remote") return ["choice",...body];
+  return ["welcome",...body,"done"];
+}
+/* ---- 部品 ---- */
+function mqChips(key,opts,multi){ const v=MQ.pa[key]; return `<div class="pchoice wrap">${opts.map(o=>{const [val,lab]=Array.isArray(o)?o:[o,o]; const on=multi?(v||[]).includes(val):v===val; return `<button type="button" class="pbtn chip" data-pa="${key}" data-v="${mqEsc(val)}" data-multi="${multi?1:0}" aria-pressed="${on}">${lab}</button>`;}).join("")}</div>`; }
+function mqStack(key,opts){ const v=MQ.pa[key]; return `<div class="pchoice stack">${opts.map(([val,lab])=>`<button type="button" class="pbtn" data-pa="${key}" data-v="${mqEsc(val)}" aria-pressed="${v===val}">${lab}</button>`).join("")}</div>`; }
+function mqYnu(key){ const v=MQ.pa[key]; return `<div class="pchoice three">${[["y","はい"],["n","いいえ"],["u","わからない"]].map(([x,l])=>`<button type="button" class="pbtn" data-pa="${key}" data-v="${x}" data-toggle="1" aria-pressed="${v===x}">${l}</button>`).join("")}</div>`; }
+const mqField=(label,inner,req,opt)=>`<div class="pq ${req&&MQ.perrKeys.includes(req)?"invalid":""}"><p>${label}${req?'<span class="req">必須</span>':opt?'<span class="opt">任意</span>':""}</p>${inner}</div>`;
+const mqInp=(key,ph,type="text",extra="")=>`<input class="pin" type="${type}" id="pa_${key}" data-in="${key}" value="${mqEsc(MQ.pa[key]||"")}" placeholder="${mqEsc(ph)}" ${extra}>`;
+function mqBody(v){
+  const P=MQ.pa, L=v==="front"?"右":"左",R=v==="front"?"左":"右"; let s="";
+  const shape=(k,x,y,a,b,n)=>{const on=P.parts.includes(n);const at=`class="part ${on?"sel":""}" tabindex="0" role="button" aria-pressed="${on}" aria-label="${n}" data-part="${n}"`;return k==="e"?`<ellipse ${at} cx="${x}" cy="${y}" rx="${a}" ry="${b}"/>`:`<rect ${at} x="${x}" y="${y}" width="${a}" height="${b}" rx="5"/>`;};
+  BODY[v].forEach(([n,k,x,y,a,b,pair])=>{ if(pair==="L"){const mx=k==="r"?120-x-a:120-x; s+=shape(k,x,y,a,b,L+n)+shape(k,mx,y,a,b,R+n);} else s+=shape(k,x,y,a,b,n); });
+  s+=`<text x="10" y="252">${L}</text><text x="104" y="252">${R}</text>`;
+  return `<div class="bodyview"><p>${v==="front"?"前":"後ろ"}</p><svg viewBox="0 0 120 258" aria-label="${v==="front"?"体の前側":"体の後ろ側"}">${s}</svg></div>`;
+}
+function mqHand(){
+  const F=MQ.pa.fingers||[]; const on=v=>F.includes(v)?"sel":"";
+  const fp=[["f1",34,70,9,22,-35],["f2",52,30,7,24,-8],["f3",68,24,7,27,0],["f4",84,30,7,24,8],["f5",98,44,6,19,18]];
+  return `<svg viewBox="0 0 130 170" class="hand" aria-label="手のひらの図">
+    ${fp.map(([v,x,y,rx,ry,rot])=>`<ellipse class="part ${on(v)}" data-finger="${v}" role="button" tabindex="0" aria-pressed="${F.includes(v)}" aria-label="${FINGERS.find(f=>f[0]===v)[1]}" cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" transform="rotate(${rot} ${x} ${y})"/>`).join("")}
+    <rect class="part ${on("palm")}" data-finger="palm" role="button" tabindex="0" aria-pressed="${F.includes("palm")}" aria-label="手のひら" x="44" y="58" width="64" height="62" rx="14"/>
+    <rect class="part" x="56" y="122" width="40" height="34" rx="8" style="pointer-events:none"/><text x="4" y="166">手のひら側</text></svg>
+    <div class="pchoice wrap" style="margin-top:8px">${FINGERS.map(([v,l])=>`<button type="button" class="pbtn chip" data-finger="${v}" aria-pressed="${F.includes(v)}">${l}</button>`).join("")}</div>`;
+}
+const mqSigPad=(key,label)=>`<div class="sigpad" data-sig="${key}"><canvas aria-label="${label}"></canvas><span class="ph" ${MQ.pa[key]?"hidden":""}>ここに指で署名</span><button type="button" class="clear" data-sigclear="${key}">書き直す</button></div>`;
+const CONSENT_INS = `<ul><li>保険が使えるのは、原因がはっきりした急なケガ（捻挫・打撲・肉離れ・骨折・脱臼）だけです。</li><li>慢性的なこり・疲れ、原因のない痛み、メンテナンス、病院に通院中の同じケガは自費になります。</li><li>保険の請求は当院が代わりに行います（受領委任）。申請書への署名と、保険者からの問い合わせへのご協力をお願いします。</li></ul>`;
+const CONSENT_TX = `<ul><li>手技・電気療法・矯正・運動療法・食事指導などを、内容と料金をご説明してから行います。</li><li>施術後に一時的なだるさや痛みが出ることがありますが、多くは1〜2日でおさまります。</li><li>食事指導は、持病の治療で食事の制限がある方は主治医の指示を優先します。</li><li>体の変化を確かめるため、施術の前に「今日の痛み（0〜10）」やつらい動作の様子をお聞きして、記録します。ご来院のときに受付のQRコードをLINEで読み取り、ご自分で「今日の痛み」などを入れていただくと、その日の<b>通院の目安</b>と<b>体の変化</b>がLINEの会員証で見られます。記録は施術と通院のご案内にだけ使い、院のスタッフだけが見ます。記録をやめたいときは、いつでもスタッフにお伝えください。</li><li>途中でやめたいときはいつでもお申し出ください。個人情報は施術と保険請求にのみ使います。</li></ul>`;
+
+/* ---- 必須チェック ---- */
+function mqRequired(page){
+  const P=MQ.pa, m=[], need=k=>{ if(P[k]===undefined||P[k]===null||P[k]==="") m.push(k); };
+  if(page==="about"){ ["name","kana","birth","sex","tel","postal","address"].forEach(need); if(MQ.opts.mode==="remote") need("history"); }
+  if(page==="area"){ if(!P.parts.length&&!P.areaOther) m.push("parts"); if(P.parts.length>1) need("main"); }
+  if(page==="state"){ need("feel"); need("nprs"); }
+  if(page==="onset"){ need("since"); need("how"); if(TRAUMA_HOW.includes(P.how)) need("where"); need("otherNow"); }
+  if(page==="safety"){ PT_RF.forEach(f=>need(f.id)); }
+  if(page==="care"){ if(!P.safety.length) m.push("safety"); }
+  if(page==="region"){ const r=ptRegionOf(P); if(r==="lumbar") SSHQ.forEach((_,i)=>need("q"+(i+1))); (PT_EXTRA[r]||[]).forEach(x=>need(x.k)); }
+  if(page==="hope"){ if(!P.expect.length) m.push("expect"); need("goal"); }
+  if(page==="consent"){ need("adult"); need("agreeIns"); need("agreeTx");
+    if(P.adult==="n"){ need("guardian"); if(MQ.opts.mode!=="remote") need("sigG"); } }
+  return m;
+}
+
+/* ---- 画面 ---- */
+function mqRender(onlyPage){
+  const pages=onlyPage?[onlyPage]:mqPages(), page=onlyPage||pages[MQ.pstep], P=MQ.pa, mode=onlyPage?"interview":MQ.opts.mode;
+  const counted=pages.filter(p=>!["welcome","done","choice","signwelcome"].includes(p)), idx=counted.indexOf(page);
+  let h=`<div class="pt-wrap">`;
+  if(idx>=0&&!onlyPage) h+=`<div class="pprog"><span>${idx+1} / ${counted.length}</span><div class="pbar"><i style="width:${(idx+1)/counted.length*100}%"></i></div></div>`;
+  if(page==="welcome"){
+    h+=`<p class="clinic">千早駅整骨院</p><h2>問診票</h2><p class="plead">ご来院ありがとうございます。施術の前に、いくつかの質問にお答えください。画面のボタンを押して進みます。</p><p class="plead">所要時間は5分ほどです。わからない質問は「わからない」を選んでください。</p>
+    <div class="pnav"><button type="button" class="pbtn big primary" data-pgo="1">はじめる</button></div>
+    <p class="staff-skip"><button type="button" class="linkbtn" data-tostaff="skip">スタッフがすべて入力する</button></p>`;
+  } else if(page==="choice"){
+    h+=`<h2>続けて問診票へ</h2><p class="plead">ご来院前に問診票に答えていただくと、当日の受付が早く終わります（約5分）。</p>
+    <div class="pchoice stack">
+      <button type="button" class="pbtn primary" data-paper="0">今、問診票に答える</button>
+      <button type="button" class="pbtn" data-paper="1">来院したときにタブレットで記入する<br><span style="font-size:11px;opacity:.75">タブレットが難しい方は紙でも大丈夫です</span></button>
+    </div><div class="pnav"><button type="button" class="pbtn big" data-pgo="-1">戻る</button></div>`;
+  } else if(page==="signwelcome"){
+    h+=`<p class="clinic">千早駅整骨院</p><h2>${mqEsc(P.name||"")}さま</h2><p class="plead">問診票のご回答ありがとうございました。18歳未満の方なので、施術を始める前に、保護者の方に説明をお読みいただき、署名をお願いします（1分ほどです）。</p>
+    <div class="pnav"><button type="button" class="pbtn big primary" data-pgo="1">はじめる</button></div>
+    ${MQ.opts.mode==="sign"?'<p class="staff-skip"><button type="button" class="linkbtn" data-tostaff="keep">スタッフ：署名をあとにする</button></p>':""}`;
+  } else if(page==="about"){
+    const a=ageOf(P.birth);
+    h+=`<h2>あなたについて</h2><p class="plead">保険の申請書に必要な内容です。</p>
+    <div class="row2">${mqField("お名前",mqInp("name","千早 太郎","text",'autocomplete="name"'),"name")}${mqField("ふりがな",mqInp("kana","お名前を入れると自動で入ります")+'<span class="small">違っていたら直してください</span>',"kana")}</div>
+    <div class="row2">${mqField("生年月日",mqInp("birth","","date",'autocomplete="bday"')+(a!==null?`<span class="small">${a}歳</span>`:""),"birth")}${mqField("性別",mqChips("sex",SEX,false),"sex")}</div>
+    ${mqField("電話番号",mqInp("tel","090-1234-5678","tel",'inputmode="tel" autocomplete="tel"'),"tel")}
+    ${mqField("郵便番号（7けた。入れると住所が自動で入ります）",mqInp("postal","8130044","text",'inputmode="numeric" autocomplete="postal-code" maxlength="8"')+'<span class="small" id="zipMsg" hidden></span>',"postal")}
+    ${mqField("ご住所（番地・建物名・部屋番号まで）",mqInp("address","福岡県福岡市東区千早◯-◯-◯ ◯◯マンション101","text",'autocomplete="street-address"'),"address")}
+    ${mode==="remote"?mqField("当院のご利用は",mqChips("history",["初めて","以前来たことがある（1か月以上ぶり）"],false),"history"):""}
+    ${mqField("お仕事・部活・スポーツ",mqInp("sport","例：デスクワーク／高校のサッカー部"),null,true)}
+    ${mqField("当院を知ったきっかけ",mqChips("source",SOURCE,false),null,true)}
+    <p class="small" style="margin:0">ご来院時に、健康保険の資格がわかるもの（マイナ保険証、資格確認書など）をお持ちください。</p>`;
+  } else if(page==="area"){
+    h+=`<h2>痛む場所・気になる場所</h2><p class="plead">図をタップしてください（いくつでも）。</p>
+    <div class="pq ${MQ.perrKeys.includes("parts")?"invalid":""}"><div class="bodymap">${mqBody("front")}${mqBody("back")}</div>
+    <div class="picked">${P.parts.length?P.parts.map(n=>`<button type="button" class="tagp" data-part="${n}">${n} ×</button>`).join(""):'<span class="none">まだ選ばれていません</span>'}</div>
+    ${mqInp("areaOther","図にない場所（例：右手の親指の付け根）")}</div>
+    ${P.parts.length>1?mqField("いちばんつらいのはどこですか",`<div class="pchoice wrap">${P.parts.map(n=>`<button type="button" class="pbtn chip" data-pa="main" data-v="${n}" aria-pressed="${P.main===n}">${n}</button>`).join("")}</div>`,"main"):""}`;
+  } else if(page==="state"){
+    h+=`<h2>いまの状態</h2>
+    ${mqField("いちばん近いもの",mqStack("feel",FEEL),"feel")}
+    ${mqField("痛みの強さ（0＝まったく痛くない、10＝想像できる最もひどい痛み）",`<div class="nrs">${[0,1,2,3,4,5,6,7,8,9,10].map(n=>`<button type="button" class="pbtn" data-pa="nprs" data-v="${n}" aria-pressed="${P.nprs===String(n)}">${n}</button>`).join("")}</div><div class="nrs-l"><span>痛くない</span><span>最もひどい</span></div>`,"nprs")}
+    ${mqField("つらい動作（いくつでも）",mqChips("motion",MOTION,true),null,true)}`;
+  } else if(page==="onset"){
+    const tr=TRAUMA_HOW.includes(P.how);
+    h+=`<h2>いつから・どうして</h2>
+    ${mqField("いつからですか",mqChips("since",SINCE.map(x=>[x[0],x[1]]),false),"since")}
+    ${mqField("どうして痛めましたか",mqChips("how",HOW,false),"how")}
+    ${tr?mqField("どこで・何をしていて",mqChips("where",WHERE,false),"where")+mqField("いつ・どのように（ひとこと）",mqInp("causeDetail","例：10/25 練習中にジャンプの着地で右足首をひねった"),null,true):""}
+    ${P.where==="交通事故"?mqField("自動車保険の会社名（わかれば）",mqInp("carIns","例：◯◯損保"),null,true):""}
+    ${mqField("このことで、病院に今も通っていますか",mqChips("otherNow",["いいえ","通っている"],false),"otherNow")}`;
+  } else if(page==="safety"){
+    h+=`<h2>体の状態について</h2><p class="plead">安全に施術を受けていただくための質問です。</p>${PT_RF.map(f=>mqField(f.q,mqYnu(f.id),f.id)).join("")}`;
+  } else if(page==="care"){
+    h+=`<h2>施術で気をつけること</h2>${mqField("当てはまるもの（いくつでも）",mqChips("safety",SAFETY,true),"safety")}
+    ${(P.safety||[]).some(v=>v!=="特になし")?mqField("内容（例：高血圧の薬、右足首にボルト）",mqInp("safetyText","内容を入力"),null,true):""}
+    ${(P.safety||[]).includes("ペースメーカー")?`<div class="pnote"><b>電気を使う施術は行えません。</b>手技を中心にご提案します。</div>`:""}`;
+  } else if(page==="region"){
+    const r=ptRegionOf(P);
+    h+=`<h2>${REGION_JP[r]}の症状について</h2>`;
+    if(r==="lumbar") h+=`<p class="plead">脚の症状について、当てはまるものに「はい」を選んでください。</p>${SSHQ.map((q,i)=>mqField(q,mqYnu("q"+(i+1)),"q"+(i+1))).join("")}`;
+    if(r==="elbow") h+=mqField("痛み・しびれがある場所（いくつでも。なければそのまま）",`<div class="handrow">${mqHand()}</div>`,null,true);
+    h+=(PT_EXTRA[r]||[]).map(x=>mqField(x.q,mqYnu(x.k),x.k)).join("");
+  } else if(page==="hope"){
+    h+=`<h2>ご希望</h2>
+    ${mqField("どうなりたいですか（いくつでも）",mqChips("expect",EXPECT,true),"expect")}
+    ${mqField("今回、いちばん大事にしたいこと",mqStack("goal",GOAL)+`<button type="button" class="subtle-btn" data-pa="insOnly" data-v="1" data-toggle="1" aria-pressed="${P.insOnly==="1"}">${P.insOnly==="1"?"✓ ":""}保険の範囲の処置だけを希望する方は、こちらを押してください</button>`,"goal")}
+    ${mqField("通えそうなペース",mqChips("pace",PACE,false),null,true)}
+    ${mqField("施術の強さの好み",mqChips("press",PRESS,false),null,true)}
+    ${mqField("苦手なもの・避けたいもの（いくつでも）",mqChips("avoid",AVOID,true),null,true)}
+    ${mqField("その他、伝えておきたいこと",mqInp("request","例：来週の試合までに良くしたい"),null,true)}`;
+  } else if(page==="consent"){
+    if(P.adult===undefined&&ageOf(P.birth)!==null) P.adult=ageOf(P.birth)<18?"n":"y";
+    const minor=P.adult==="n", remote=mode==="remote";
+    h+=`<h2>説明と同意</h2><p class="plead">読んで、1と2にチェックし、3を選んでください。</p>
+    ${mqField("施術を受ける方は",mqChips("adult",[["y","18歳以上（成人・社会人）"],["n","18歳未満（未成年）"]],false)+`<span class="small">${minor?"18歳未満の方は、保護者の方の同意（お名前と署名）が必要です。":P.adult==="y"?"保護者の方の署名は必要ありません。":""}</span>`,"adult")}
+    <div class="pq ${MQ.perrKeys.includes("agreeIns")?"invalid":""}"><p>1. 保険診療について</p><div class="consent-text">${CONSENT_INS}</div>
+      <button type="button" class="agree" data-pa="agreeIns" data-v="1" data-toggle="1" aria-pressed="${P.agreeIns==="1"}"><span class="box">${P.agreeIns==="1"?"✓":""}</span>理解しました。ケガの原因に間違いはありません。</button></div>
+    <div class="pq ${MQ.perrKeys.includes("agreeTx")?"invalid":""}"><p>2. 施術について</p><div class="consent-text">${CONSENT_TX}</div>
+      <button type="button" class="agree" data-pa="agreeTx" data-v="1" data-toggle="1" aria-pressed="${P.agreeTx==="1"}"><span class="box">${P.agreeTx==="1"?"✓":""}</span>同意して施術を受けます。</button></div>
+    ${minor?`<div class="pq ${MQ.perrKeys.some(k=>["guardian","sigG"].includes(k))?"invalid":""}"><p>保護者の方の同意<span class="req">必須</span></p>
+      ${mqInp("guardian","保護者の方のお名前と続柄（例：千早 花子（母））")}
+      ${remote?`<p class="small" style="margin:0">保護者の方の署名は、ご来院時に受付でお願いします。</p>`:`<p class="small" style="margin:0">上の1と2の内容に、保護者として同意します。</p>${mqSigPad("sigG","保護者の方の署名欄")}`}</div>`:""}`;
+  } else if(page==="done"){
+    const flag=PT_RF.some(f=>P[f.id]==="y");
+    h+=`<h2>ご記入ありがとうございました</h2><p class="plead">このままタブレットをスタッフにお渡しください。</p>
+    ${flag?`<div class="pnote"><b>大切なご回答がありました。</b>スタッフがすぐに確認します。</div>`:""}
+    <p class="staff-skip"><button type="button" class="btn" id="toStaffBtn" data-tostaff="done">スタッフ用：入力を続ける</button></p>`;
+  }
+  if(!onlyPage&&!["welcome","done","choice","signwelcome"].includes(page)){
+    const last=pages[MQ.pstep+1]===undefined||(mode!=="remote"&&pages[MQ.pstep+1]==="done");
+    h+=`${MQ.perr?`<p class="perr">${MQ.perr}</p>`:""}<div class="pnav"><button type="button" class="pbtn big" data-pgo="-1">戻る</button><button type="button" class="pbtn big primary" data-pgo="1">${last?(mode==="remote"?"確認へ進む":"送信する"):"次へ"}</button></div>`;
+  }
+  return h+`</div>`;
+}
+function mqInitSigs(root){
+  (root||document).querySelectorAll(".sigpad").forEach(pad=>{
+    const key=pad.dataset.sig, cv=pad.querySelector("canvas"), ph=pad.querySelector(".ph");
+    const r=cv.getBoundingClientRect(); cv.width=Math.round((r.width||300)*2); cv.height=Math.round((r.height||140)*2);
+    const ctx=cv.getContext("2d"); Object.assign(ctx,{lineWidth:5,lineCap:"round",lineJoin:"round",strokeStyle:"#111"});
+    if(MQ.pa[key]){ const im=new Image(); im.onload=()=>ctx.drawImage(im,0,0,cv.width,cv.height); im.src=MQ.pa[key]; }
+    let drawing=false; const pos=e=>{const b=cv.getBoundingClientRect();return [(e.clientX-b.left)*2,(e.clientY-b.top)*2];};
+    cv.addEventListener("pointerdown",e=>{drawing=true;cv.setPointerCapture(e.pointerId);const [x,y]=pos(e);ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+.1,y+.1);ctx.stroke();ph.hidden=true;});
+    cv.addEventListener("pointermove",e=>{if(!drawing)return;const [x,y]=pos(e);ctx.lineTo(x,y);ctx.stroke();});
+    const end=()=>{ if(!drawing) return; drawing=false; const out=document.createElement("canvas"); out.width=400; out.height=Math.round(400*cv.height/cv.width); const c=out.getContext("2d"); c.fillStyle="#fff"; c.fillRect(0,0,out.width,out.height); c.drawImage(cv,0,0,out.width,out.height); MQ.pa[key]=out.toDataURL("image/jpeg",.7); MQ.perrKeys=MQ.perrKeys.filter(k=>k!==key); };
+    cv.addEventListener("pointerup",end); cv.addEventListener("pointercancel",end);
+  });
+}
+/* クリック・入力。処理したら true を返す */
+function mqClick(e){
+  const keep=fn=>{ const y=window.scrollY; fn(); MQ.opts.rerender(); window.scrollTo({top:y}); };
+  const sv=e.target.closest("[data-part]"); if(sv){ const n=sv.dataset.part; keep(()=>{ const P=MQ.pa; P.parts=P.parts.includes(n)?P.parts.filter(x=>x!==n):[...P.parts,n]; if(P.main&&!P.parts.includes(P.main)) P.main=undefined; MQ.perrKeys=MQ.perrKeys.filter(k=>k!=="parts"); }); return true; }
+  const fv=e.target.closest("[data-finger]"); if(fv){ const v=fv.dataset.finger; keep(()=>{ const F=MQ.pa.fingers||[]; MQ.pa.fingers=F.includes(v)?F.filter(x=>x!==v):[...F,v]; }); return true; }
+  const b=e.target.closest("button"); if(!b) return false;
+  if(b.dataset.pa){ const k=b.dataset.pa, v=b.dataset.v, multi=b.dataset.multi==="1", tog=b.dataset.toggle==="1";
+    keep(()=>{ const P=MQ.pa;
+      if(multi){ let arr=P[k]||[]; arr=arr.includes(v)?arr.filter(x=>x!==v):[...arr,v]; if(k==="safety"||k==="avoid") arr=v==="特になし"&&arr.includes(v)?["特になし"]:arr.filter(x=>x!=="特になし"||v==="特になし"); P[k]=arr; }
+      else if(tog) P[k]=P[k]===v?undefined:v;
+      else P[k]=v;
+      if(k==="how"&&!TRAUMA_HOW.includes(v)) { P.where=undefined; P.causeDetail=undefined; }
+      if(k==="ins"&&["none","seiho"].includes(v)) { P.insRel=undefined; P.insName=undefined; }
+      MQ.perrKeys=MQ.perrKeys.filter(x=>x!==k); if(!MQ.perrKeys.length) MQ.perr="";
+    }); return true; }
+  if(b.dataset.sigclear){ keep(()=>{ MQ.pa[b.dataset.sigclear]=undefined; }); return true; }
+  if(b.dataset.pgo){ const d=+b.dataset.pgo, pages=mqPages(), page=pages[MQ.pstep];
+    if(d<0&&MQ.pstep===0){ MQ.opts.onBackFirst&&MQ.opts.onBackFirst(); return true; }
+    if(d>0&&!["welcome","choice","signwelcome"].includes(page)){ const miss=mqRequired(page); if(miss.length){ MQ.perrKeys=miss; MQ.perr="赤枠の項目にお答えください。"; MQ.opts.rerender(); const el=document.querySelector(".pq.invalid"); if(el) el.scrollIntoView({behavior:"smooth",block:"center"}); return true; } }
+    MQ.perr=""; MQ.perrKeys=[];
+    if(d>0&&MQ.pstep===pages.length-1){ MQ.opts.onDone&&MQ.opts.onDone(); return true; }
+    MQ.pstep=Math.max(0,Math.min(pages.length-1,MQ.pstep+d)); MQ.opts.rerender(); window.scrollTo({top:0}); return true; }
+  if(b.dataset.paper){ if(b.dataset.paper==="1"){ MQ.pa.paper="1"; MQ.opts.onDone&&MQ.opts.onDone(); } else { MQ.pa.paper=undefined; MQ.pstep=1; MQ.opts.rerender(); window.scrollTo({top:0}); } return true; }
+  return false;
+}
+function mqInput(e){ const k=e.target.dataset&&e.target.dataset.in; if(!k) return false; MQ.pa[k]=e.target.value; MQ.perrKeys=MQ.perrKeys.filter(x=>x!==k); if(k==="postal") mqZipLookup(e.target.value); if(k==="address") MQ.zipAuto=null; if(k==="name") mqKanaFromInput(e); if(k==="kana") MQ.kana.auto=null; return true; }
+/* ---- お名前からふりがな：日本語入力で変換する前の「ひらがな」を拾って入れる（変換後の漢字から読みは推測しない）---- */
+MQ.kana={buf:"",cur:"",auto:null};
+const MQ_HIRA=/^[ぁ-ゖゝゞー　 ]+$/;
+const mqToHira=s=>String(s).replace(/[ァ-ヶ]/g,ch=>String.fromCharCode(ch.charCodeAt(0)-0x60));
+function mqKanaApply(){
+  const cur=MQ.pa.kana||""; if(cur&&cur!==MQ.kana.auto) return;      /* 手で直したふりがなは上書きしない */
+  const v=MQ.kana.buf.replace(/[　 ]+/g," ").trim();
+  MQ.pa.kana=v||undefined; MQ.kana.auto=v; const el=document.getElementById("pa_kana"); if(el) el.value=v;
+  MQ.perrKeys=MQ.perrKeys.filter(x=>x!=="kana");
+}
+function mqKanaFromInput(e){
+  if(e.isComposing) return;
+  const v=e.target.value;
+  if(!v.trim()){ MQ.kana.buf=""; mqKanaApply(); return; }
+  if(MQ_HIRA.test(mqToHira(v))){ MQ.kana.buf=mqToHira(v); mqKanaApply(); return; }   /* ひらがな・カタカナのまま確定した場合 */
+  if(e.inputType==="insertText"&&/^[　 ]$/.test(e.data||"")){ MQ.kana.buf+=" "; mqKanaApply(); }
+}
+document.addEventListener("compositionstart",e=>{ if(e.target.id==="pa_name") MQ.kana.cur=""; });
+document.addEventListener("compositionupdate",e=>{ if(e.target.id!=="pa_name") return; const d=mqToHira((e.data||"").replace(/[a-zａ-ｚ]+$/i,"")); if(d&&MQ_HIRA.test(d)) MQ.kana.cur=d; });
+document.addEventListener("compositionend",e=>{ if(e.target.id!=="pa_name") return; const d=mqToHira(e.data||""); const add=MQ_HIRA.test(d)?d:MQ.kana.cur; if(add){ MQ.kana.buf+=add; mqKanaApply(); } MQ.kana.cur=""; });
+/* ---- 郵便番号から住所（日本郵便の郵便番号データ。ajaxzip3形式をCDNから読み込み）---- */
+const PREF = ["","北海道","青森県","岩手県","宮城県","秋田県","山形県","福島県","茨城県","栃木県","群馬県","埼玉県","千葉県","東京都","神奈川県","新潟県","富山県","石川県","福井県","山梨県","長野県","岐阜県","静岡県","愛知県","三重県","滋賀県","京都府","大阪府","兵庫県","奈良県","和歌山県","鳥取県","島根県","岡山県","広島県","山口県","徳島県","香川県","愛媛県","高知県","福岡県","佐賀県","長崎県","熊本県","大分県","宮崎県","鹿児島県","沖縄県"];
+const MQ_ZIP_URL = p=>`https://cdn.jsdelivr.net/npm/japan-postal-code@0.3.0/zipdata/zip-${p}.js`;
+MQ.zipCache={}; MQ.zipAuto=null;
+function mqZipLookup(raw){
+  const z=String(raw).replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-65248)).replace(/\D/g,"");
+  const msg=t=>{ const el=document.getElementById("zipMsg"); if(el){ el.textContent=t; el.hidden=!t; } };
+  if(z.length!==7){ msg(""); return; }
+  const fill=data=>{
+    const r=data&&data[z]; if(!r){ msg("この郵便番号の住所が見つかりませんでした。住所をそのまま入力してください。"); return; }
+    const head=PREF[r[0]]+r[1]+r[2]+(r[3]||"");
+    const el=document.getElementById("pa_address");
+    const cur=MQ.pa.address||"";
+    if(!cur||cur===MQ.zipAuto){ MQ.pa.address=head; MQ.zipAuto=head; if(el){ el.value=head; MQ.perrKeys=MQ.perrKeys.filter(x=>x!=="address"); } }
+    msg("住所を入れました。続けて番地・建物名・部屋番号を入力してください。");
+    if(el){ el.focus(); try{ el.setSelectionRange(el.value.length,el.value.length); }catch(err){} }
+  };
+  const p=z.slice(0,3);
+  if(MQ.zipCache[p]){ fill(MQ.zipCache[p]); return; }
+  window.zipdata=d=>{ MQ.zipCache[p]=d; if(MQ.zipWant===p) fill(d); };
+  MQ.zipWant=p; msg("住所を調べています…");
+  const s=document.createElement("script"); s.src=MQ_ZIP_URL(p); s.async=true;
+  s.onerror=()=>msg("住所を自動で入れられませんでした。住所をそのまま入力してください。");
+  document.head.appendChild(s);
+}
+
+const PRICE = {'保険診療のみ':'窓口負担のみ','基本施術':'初診・2回目 2,300円／3回目以降 1,500円','全身ケアコース':'初診・2回目 4,800円／3回目以降 3,700円','リカバリーコース':'初診・2回目 5,300円／3回目以降 4,500円','全身プレミアムケア':'8,800円（学生 5,000円）','全身トータルケア':'5,500円（学生 3,000円）','ピンポイント痛みケア':'3,500円（学生 1,500円）'};
+const SPORT_RE=/部|スポーツ|サッカー|野球|バスケ|バレー|テニス|陸上|ラン|マラソン|ゴルフ|ジム|水泳|ダンス|柔道|剣道|空手|ラグビー|ハンド|卓球|バド/;
+function mqJudge(pa){
+  const r=pa, why=[], also=[]; if(!r.how) return null;
+  const ds=sinceDaysOf(r), trauma=TRAUMA_HOW.includes(r.how)&&!!r.where, painful=Number(r.feel)<=5;
+  const car=r.where==="交通事故", work=r.where==="仕事・通勤中";
+  const nAreas=(r.parts||[]).length+(r.areaOther?1:0); const age=ageOf(r.birth), student=age!==null&&age<=18;
+  const sporty=r.where==="運動・部活中"||SPORT_RE.test(r.sport||"")||(r.expect||[]).includes("スポーツのパフォーマンスを上げたい");
+  const sf=r.safety||[], noElec=sf.includes("ペースメーカー"), ex=r.expect||[];
+  let track,cls;
+  if(car){track="自賠責（交通事故）";cls="ins";why.push("交通事故のケガ");}
+  else if(r.otherNow==="通っている"){track="自費（病院に通院中）";cls="self";why.push("同じケガで病院に通院中のため保険は使えない");}
+  else if(trauma&&painful&&ds!==null&&ds<=14){track=work?"保険（労災を確認）":"保険";cls=work?"chk":"ins";why.push(`${r.where}で${r.how}（${SINCE.find(x=>x[0]===r.since)[1]}）`);}
+  else if(trauma&&painful&&ds===30){track="要確認";cls="chk";why.push("原因は明確だが2週間以上たっている");}
+  else{track="自費";cls="self"; if(!TRAUMA_HOW.includes(r.how)) why.push(`きっかけが「${r.how}」でケガではない`); else if(ds===null||ds>30) why.push("1か月以上前、または時期が不明"); if(!painful) why.push("痛みではなく体のチェックが目的");}
+  let menu,note=""; const goal=r.goal, steady=["週2回以上","週1回くらい"].includes(r.pace);
+  if(cls!=="self"){
+    if(r.insOnly==="1"){menu="保険診療のみ";why.push("保険の範囲の処置のみ希望（基本施術の説明をしてから確定）");}
+    else if(goal==="quick"||goal==="short"){menu="基本施術";why.push("今の痛みを早く楽にしたい");}
+    else if(goal==="whole"){menu="全身ケアコース";why.push("体全体のバランスも整えたい");}
+    else if((goal==="return"||goal==="prevent")&&!noElec){menu="リカバリーコース";note=ex.includes("疲れ・睡眠・自律神経")?"低酸素":"楽トレ";why.push(goal==="return"?"早く復帰したい":"くり返さない体づくりを希望");}
+    else if(goal==="return"||goal==="prevent"){menu="全身ケアコース";why.push("ペースメーカーのため楽トレ・低酸素は使わない");}
+    else if(goal==="diet"){menu="基本施術";also.push("食事改善プランを案内");}
+    else if((sporty||ex.includes("再発しない体にしたい"))&&!noElec){menu="リカバリーコース";note="楽トレ";why.push("相談希望：スポーツ・再発予防の回答から");}
+    else if(ex.includes("ゆがみを整えたい・メンテナンス")||nAreas>=3){menu="全身ケアコース";why.push("相談希望："+(nAreas>=3?`痛む場所が${nAreas}か所`:"ゆがみ・メンテナンスを希望"));}
+    else {menu="基本施術";why.push("相談希望");}
+    if(car) note=(note?note+"／":"")+"窓口0円"; if(student) also.push("18歳以下：医療助成の対象か確認");
+  } else {
+    const many=nAreas>=3;
+    if(goal==="quick"||goal==="short"){menu="ピンポイント痛みケア";why.push(goal==="short"?"短い時間を希望":"今の痛みを早く楽にしたい");}
+    else if(goal==="whole"){menu="全身トータルケア";why.push("体全体のバランスも整えたい");}
+    else if(goal==="return"&&!noElec){menu="全身プレミアムケア";why.push("早く復帰したい");}
+    else if(goal==="prevent"){menu="全身トータルケア";also.push("2回目以降は月額プランを案内");}
+    else if(goal==="diet"){menu="全身トータルケア";also.push("食事改善プランを案内");}
+    else if(r.feel==="6"||(ex.includes("ゆがみを整えたい・メンテナンス")&&!many)){menu="全身トータルケア";also.push("2回目以降は月額プランを案内");}
+    else if(many&&(ex.includes("再発しない体にしたい")||sporty)&&!noElec){menu="全身プレミアムケア";why.push("痛む場所が多く、根本改善を希望");}
+    else if(many){menu="全身トータルケア";why.push(`痛む場所が${nAreas}か所`);}
+    else {menu="ピンポイント痛みケア";why.push(`痛む場所が${nAreas}か所`);}
+    if(student) also.push("学生料金");
+  }
+  if(steady&&["return","prevent","diet","whole"].includes(goal)) also.push(`通えるペース「${r.pace}」：月額プランの案内が合う`);
+  if(ex.includes("ダイエット・お腹まわり")&&goal!=="diet") also.push("食事改善プランも案内");
+  return {track,cls,menu,price:PRICE[menu]||"",note,why,also};
+}
+
+
+/* 術者がタブレットで聞き取りながら入力する画面（紙の問診票の方・追加の聞き取り）。住所・保険・同意は紙の問診票で確認 */
+function mqInterviewHTML(){
+  const P=MQ.pa, pages=["area","state","onset","care"]; if(ptRegionOf(P)) pages.push("region"); pages.push("hope");
+  return `<div class="pt-wrap iv">${mqField("お名前（カルテ用・任意）",mqInp("name","千早 太郎"),null,true)}${mqField("生年月日（年齢の判定に使います・任意）",mqInp("birth","","date"),null,true)}${pages.map(p=>`<section class="ivsec">${mqRender(p)}</section>`).join("")}</div>`;
+}
+/* ---- 回答からの「施術の進め方（目安）」：料金・コースではなく、何をするかの方向性。最終決定は検査のあと ----
+   根拠：急性の軟部組織損傷 PEACE & LOVE（Dubois & Esculier 2020 BJSM）、足関節捻挫（Vuurberg 2018 BJSM）、
+   腰痛（腰痛診療ガイドライン2019）、頸部痛（Blanpied 2017 JOSPT）、膝OA（OARSI 2019）、肩関節周囲炎（Kelley 2013 JOSPT）、
+   肩の腱障害（Diercks 2014 Acta Orthop）、外側上顆痛（Coombes 2015 JOSPT）、手根管症候群（Erickson 2019 JOSPT）、足底腱膜症（Koc 2023 JOSPT） */
+function mqDirection(pa){
+  const P=pa||{}, out=[], r=ptRegionOf(P), ph=phaseOf(P), trauma=TRAUMA_HOW.includes(P.how), av=P.avoid||[], ex=P.expect||[];
+  if(PT_RF.some(f=>P[f.id]==="y")) out.push("先に詳しくお話をうかがい、必要なときは病院での検査をおすすめします");
+  if(P.otherNow==="通っている") out.push("通院中の病院の治療内容をうかがってから、施術を合わせます");
+  const acuteTrauma=trauma&&(ph==="a"||(P.since==="d1"||P.since==="d7"||P.since==="d14"));
+  if(acuteTrauma&&(r==="lumbar"||r==="neck")){
+    out.push(r==="lumbar"?"急な腰の痛み：安静にしすぎず、できる範囲で動いてもらうための説明と、痛みを和らげる手技・処置":"急な首の痛み：痛みを和らげる手技・処置と、痛みの出ない範囲で首を動かす運動");
+    out.push("痛みが落ち着くのに合わせて、運動を少しずつ増やします");
+  } else if(acuteTrauma){
+    out.push("ケガをした所を守る処置（固定・テーピングなど）と、腫れ・痛みを抑える処置");
+    out.push("痛みに合わせて少しずつ動かし、早めに日常の動きに戻すための運動");
+    if(r==="ankle") out.push("足首：くり返しのねんざを防ぐバランス練習");
+  } else {
+    const byR={
+      neck:P.n_arm==="y"?"首：神経の検査をして、首の動きを助ける手技と、腕のしびれに合わせた運動":"首：首・背中の関節や筋肉への手技と、首まわりの運動",
+      shoulder:P.s_dm==="y"||P.s_other==="y"||P.s_night==="y"?"肩：痛みの強さに合わせたストレッチと、動く範囲を少しずつ広げる運動":"肩：肩まわりの筋力を少しずつつける運動と手技",
+      elbow:P.e_night==="y"||P.e_shake==="y"?"手：手首の神経の検査と、夜間の手首の固定・神経を動かす運動":P.e_lat==="y"?"ひじ：使い方の調整と、前腕の筋力を少しずつつける運動":"ひじ・手首：負担の調整と運動",
+      lumbar:sshqScoreOf(P)?.pos?"腰：前かがみが楽な姿勢を生かした運動と歩き方の工夫":"腰：できる範囲で動いてもらいながら、運動と手技を組み合わせる",
+      hip:"脚のつけ根：股関節まわりの筋力運動と、負担の少ない動き方",
+      knee:P.k_give==="y"||P.k_lock==="y"?"ひざ：ひざの安定性の検査と、太もも・お尻の筋力運動":"ひざ：太もも・お尻の筋力運動と、ひざへの負担を減らす工夫",
+      ankle:P.f_heel==="y"?"かかと：足の裏のストレッチと、靴や歩き方の工夫":"足首・足：足首の動きとバランスの運動"
+    };
+    if(r&&byR[r]) out.push(byR[r]);
+    else if(P.feel==="6") out.push("体全体の動きのチェックと、硬い所をほぐす手技・ストレッチ");
+    else out.push("痛む所の動きを確かめ、手技と運動を組み合わせる");
+    if(ph==="c") out.push("長く続く痛みには、自宅でもできる運動を中心に、手技はその補助として行います");
+  }
+  if(r==="knee"&&ageOf(P.birth)>=45&&!acuteTrauma) out.push("必要に応じて体重管理のご相談");
+  if(P.goal==="diet"||ex.includes("ダイエット・お腹まわり")) out.push("食事の内容の見直し（食事指導）");
+  if(P.goal==="prevent"||P.goal==="return"||ex.includes("再発しない体にしたい")||ex.includes("スポーツのパフォーマンスを上げたい")) out.push("くり返さないための体づくりの運動");
+  if(P.goal==="whole") out.push("痛む所だけでなく、体全体の動きもチェック");
+  const care=[];
+  if(av.includes("強く押されるのが苦手")||P.press==="弱め") care.push("やさしい強さで行います");
+  if(P.press==="しっかりめ") care.push("強さはしっかりめを希望");
+  if(av.includes("うつ伏せの姿勢がつらい")) care.push("うつ伏せを避け、横向きや座った姿勢で行います");
+  if(av.includes("電気が苦手")||(P.safety||[]).includes("ペースメーカー")) care.push("電気は使いません");
+  if(av.includes("テーピング・湿布でかぶれやすい")) care.push("テープ・湿布は使わないか、肌に合わせて選びます");
+  if(av.includes("運動は自信がない")) care.push("運動は軽いものから一緒に練習します");
+  if((P.safety||[]).includes("妊娠中")) care.push("妊娠中のため、電気・矯正・うつ伏せは行いません");
+  return {steps:out, care};
+}
+const MQ_FIRST_VISIT = "初回は「お話をうかがう → 動きや神経などの検査 → 結果と施術の説明 → 施術 → ご自宅でのケアの説明」の順に進めます。施術の内容は、検査の結果を見て一緒に決めます。";
+/* ---- 院へ送る形（LINEのメッセージに入れる取り込みコード）---- */
+const MQ_SEND_KEYS = ["name","kana","birth","sex","tel","postal","address","history","sport","source","ins","insRel","insName","subsidy","parts","main","areaOther","feel","nprs","motion","since","how","where","causeDetail","carIns","otherNow","rf_ca","rf_st","rf_tr","rf_br","rf_ce","rf_pr","rf_sy","safety","safetyText","q1","q2","q3","q4","q5","q6","q7","q8","q9","q10","n_arm","n_clumsy","n_gait","n_head","s_night","s_lift","s_dm","s_other","s_disl","e_lat","e_shake","e_night","e_thumb","fingers","h_groin","h_sock","k_give","k_lock","k_stairs","k_swell","f_heel","f_snap","f_twist","expect","goal","insOnly","pace","press","avoid","request","agreeIns","agreeTx","selfLog","adult","guardian","paper"];
+function mqEncode(pa){
+  const o={v:1}; MQ_SEND_KEYS.forEach(k=>{ const x=pa[k]; if(x!==undefined&&x!==null&&x!==""&&!(Array.isArray(x)&&!x.length)) o[k]=x; });
+  if(pa.agreeTx==="1"&&!o.selfLog) o.selfLog="y";   /* 2026-11-20：痛みの記録は全員（「2. 施術について」の同意にふくめた） */
+  const json=JSON.stringify(o);
+  if(window.LZString) return "L"+LZString.compressToEncodedURIComponent(json);
+  return "B"+btoa(unescape(encodeURIComponent(json)));
+}
+function mqDecode(text){
+  const m=String(text).replace(/\s+/g,"").match(/\[\[MQ:([A-Za-z0-9+/=_$\-]+)\]\]/); if(!m) return null;
+  const s=m[1]; let json=null;
+  try{ if(s[0]==="L"&&window.LZString) json=LZString.decompressFromEncodedURIComponent(s.slice(1)); else if(s[0]==="B") json=decodeURIComponent(escape(atob(s.slice(1)))); }catch(err){ json=null; }
+  if(!json) return null; try{ const o=JSON.parse(json); if(o.v!==1) return null; const pa=mqFreshPA(); MQ_SEND_KEYS.forEach(k=>{ if(o[k]!==undefined) pa[k]=o[k]; }); return pa; }catch(err){ return null; }
+}
+/* 人が読める要約（LINEメッセージ・カルテ用） */
+function mqSummaryLines(pa){
+  const yn=v=>v==="y"?"はい":v==="n"?"いいえ":v==="u"?"わからない":"—";
+  const a=ageOf(pa.birth), L=[], lab=(arr,v)=>(arr.find(x=>x[0]===v)||[,v||"—"])[1];
+  L.push(["氏名",`${pa.name||"—"}（${pa.kana||""}）${a!==null?a+"歳":""}　${pa.sex||""}`]);
+  L.push(["電話",pa.tel||"—"]);
+  L.push(["住所",`〒${pa.postal||""} ${pa.address||""}`]);
+  if(pa.history) L.push(["ご利用",pa.history]);
+  if(pa.sport) L.push(["仕事・スポーツ",pa.sport]);
+  L.push(["場所",[...(pa.parts||[]),pa.areaOther].filter(Boolean).join("、")||"—"]);
+  if(mainPartOf(pa)) L.push(["いちばんつらい",mainPartOf(pa)]);
+  L.push(["状態",lab(FEEL,pa.feel)+`　痛み ${pa.nprs??"—"}/10`]);
+  if(pa.motion?.length) L.push(["つらい動作",pa.motion.join("、")]);
+  L.push(["いつから",lab(SINCE,pa.since)]);
+  L.push(["原因",(pa.how||"—")+(pa.where?`（${pa.where}）`:"")]);
+  if(pa.causeDetail) L.push(["様子",pa.causeDetail]);
+  if(pa.carIns) L.push(["自動車保険",pa.carIns]);
+  L.push(["病院に通院中",pa.otherNow||"—"]);
+  const rf=PT_RF.filter(f=>pa[f.id]==="y"); L.push(["危険サイン",rf.length?"あり（"+rf.length+"件）":PT_RF.some(f=>pa[f.id]==="u")?"「わからない」あり":"なし"]);
+  L.push(["施術の注意",(pa.safety||[]).join("、")+(pa.safetyText?`（${pa.safetyText}）`:"")]);
+  const sq=sshqScoreOf(pa); if(sq) L.push(["狭窄症の問診票",`Q1〜4：${sq.s1}点、Q5〜10：${sq.s2}点 → ${sq.pos?"陽性":"陰性"}`]);
+  if(pa.fingers?.length) L.push(["手の症状の場所",pa.fingers.map(f=>FINGERS.find(x=>x[0]===f)[1]).join("、")]);
+  (PT_EXTRA[ptRegionOf(pa)]||[]).forEach(x=>{ if(pa[x.k]) L.push([x.q,yn(pa[x.k])]); });
+  if(pa.expect?.length) L.push(["希望",pa.expect.join("、")]);
+  if(pa.goal) L.push(["大事にしたいこと",lab(GOAL,pa.goal)]);
+  if(pa.insOnly==="1") L.push(["施術の範囲","保険の範囲の処置のみ希望"]);
+  if(pa.pace) L.push(["通えるペース",pa.pace]);
+  if(pa.press) L.push(["強さの好み",pa.press]);
+  if(pa.avoid?.length) L.push(["苦手なもの",pa.avoid.join("、")]);
+  if(pa.request) L.push(["伝えたいこと",pa.request]);
+  if(pa.selfLog) L.push(["痛みの記録（通院の目安）",pa.selfLog==="y"?"使う（同意）":"必要ない"]);
+  L.push(["同意",`保険診療 ${pa.agreeIns==="1"?"✓":"—"}　施術 ${pa.agreeTx==="1"?"✓":"—"}${pa.adult==="n"?"　未成年・保護者："+(pa.guardian||"—")+(pa.sigG?"（署名済み）":"（署名は来院時）"):""}`]);
+  return L;
+}
+</script>
+<script>
+(function () {
+  // ===== 院の設定（ここを書き換えると反映されます）=====
+  const CFG = (window.CLINIC_CONFIG || {}); // 院名・電話番号などは config.js で変える
+  const CLINIC = {
+    liffId: (CFG.liff && CFG.liff.booking) || '2012705384-LmlyZald',
+    lineId: CFG.lineId || '@715gkvje',
+    // 予約台帳（Googleスプレッドシート）のウェブアプリURL（…/exec）。空欄なら台帳とはつながない
+    sheetUrl: CFG.gasUrl || 'https://script.google.com/macros/s/AKfycbxzSuZtADnU2dx7UCerXzRdf3JAaXN06e51kO7iij-Ovj-8BKG8KPdpGnC5CqepxBTo/exec',
+    tel: CFG.tel !== undefined ? CFG.tel : '092-672-6640',
+    daysAhead: 60,          // 何日先まで予約を受けるか（約2か月）
+    stepMin: 15,            // 予約枠の刻み（分）
+    lastBeforeClose: 30,    // 受付終了の何分前まで予約できるか
+    leadMin: 60,            // 当日予約は今から何分後以降
+    // 曜日ごとの受付時間（0=日 … 6=土）。空配列は休診
+    hours: {
+      0: [['10:00', '19:00']],
+      1: [['12:00', '21:00']],
+      2: [['15:00', '21:00']],
+      3: [['12:00', '21:00']],
+      4: [['12:00', '21:00']],
+      5: [['12:00', '21:00']],
+      6: [['10:00', '19:00']]
+    },
+    // 祝日の受付時間（土日と同じ）
+    holidayHours: [['10:00', '19:00']],
+    holidays: ['2026-11-03','2026-11-23','2027-01-01','2027-01-11','2027-02-11','2027-02-23','2027-03-22','2027-04-29','2027-05-03','2027-05-04','2027-05-05','2027-07-19','2027-08-11','2027-09-20','2027-09-23','2027-10-11','2027-11-03','2027-11-23'],
+    // 臨時休診日（YYYY-MM-DD）。年末年始などはここに追加
+    closed: []
+  };
+  // =====================================================
+
+  const $ = (id) => document.getElementById(id);
+  const form = $('form');
+  $('telText').textContent = CLINIC.tel;
+  const FLOWS = {
+    '初診': ['visit', 'when', 'intake', 'confirm'],
+    '再診': ['visit', 'when', 're', 'confirm']
+  };
+  const LABEL = { visit: 'ご来院', when: '日時', re: 'お名前と症状', intake: '問診票', confirm: '確認・送信' };
+  const radio = (n) => (document.querySelector(`input[name="${n}"]:checked`) || {}).value || '';
+  const checks = (n) => [...document.querySelectorAll(`input[name="${n}"]:checked`)].map((b) => b.value);
+  const val = (id) => $(id).value.trim();
+  let cur = 'visit';
+  const flow = () => FLOWS[radio('visit')] || ['visit', 'when', '…', 'confirm'];
+
+  // 予約台帳の空き状況（下の「予約台帳の空き状況」で読み込む）
+  let BUSY = null, DUR = { new: 30, re: 15 }, busyState = 'off';
+  // ---- 日付と時間 ----
+  const W = ['日', '月', '火', '水', '木', '金', '土'];
+  const pad = (n) => String(n).padStart(2, '0');
+  const ymd = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const toMin = (s) => { const [h, m] = s.split(':').map(Number); return h * 60 + m; };
+  const fromMin = (m) => `${Math.floor(m / 60)}:${pad(m % 60)}`;
+  function slotsFor(d) {
+    if (CLINIC.closed.includes(ymd(d))) return [];
+    const now = new Date(), today = ymd(now) === ymd(d);
+    const nowMin = now.getHours() * 60 + now.getMinutes() + CLINIC.leadMin;
+    const out = [];
+    (CLINIC.holidays.includes(ymd(d)) ? CLINIC.holidayHours : (CLINIC.hours[d.getDay()] || [])).forEach(([a, b]) => {
+      const groupe = [];
+      for (let m = toMin(a); m <= toMin(b) - CLINIC.lastBeforeClose; m += CLINIC.stepMin) if (!today || m >= nowMin) groupe.push(m);
+      [[0, 12 * 60, '午前'], [12 * 60, 17 * 60, '午後'], [17 * 60, 24 * 60, '夕方以降']].forEach(([lo, hi, name]) => {
+        const g = groupe.filter((m) => m >= lo && m < hi); if (g.length) { g.name = name; out.push(g); }
+      });
+    });
+    return out;
+  }
+  const dates = [];
+  const base = new Date(); base.setHours(0, 0, 0, 0);
+  for (let i = 0; i < CLINIC.daysAhead; i++) { const d = new Date(base); d.setDate(base.getDate() + i); dates.push(d); }
+  const months = [...new Set(dates.map((d) => d.getFullYear() * 12 + d.getMonth()))];
+  let calMonth = 0, selDate = '';
+  function buildDays() {
+    const mk = months[calMonth], yy = Math.floor(mk / 12), mm = mk % 12;
+    $('calTitle').textContent = `${yy}年${mm + 1}月`;
+    $('calPrev').disabled = calMonth === 0; $('calNext').disabled = calMonth === months.length - 1;
+    let html = W.map((w, k) => `<span class="wh${k === 0 ? ' sun' : k === 6 ? ' sat' : ''}">${w}</span>`).join('');
+    const first = new Date(yy, mm, 1), last = new Date(yy, mm + 1, 0).getDate();
+    for (let k = 0; k < first.getDay(); k++) html += '<span class="day out"><span></span></span>';
+    for (let dn = 1; dn <= last; dn++) {
+      const d = new Date(yy, mm, dn), w = d.getDay(), i = dates.findIndex((x) => ymd(x) === ymd(d));
+      const cls = `day${w === 0 || CLINIC.holidays.includes(ymd(d)) ? ' sun' : w === 6 ? ' sat' : ''}${i === 0 ? ' today' : ''}`;
+      if (i < 0) { html += `<label class="${cls}"><input type="radio" disabled aria-label="${mm + 1}月${dn}日 予約できません"><span><span class="d">${dn}</span></span></label>`; continue; }
+      const all = slotsFor(d), open = all.some((g) => g.some((m) => !isBusy(d, m)));
+      const closedDay = !(CLINIC.holidays.includes(ymd(d)) ? CLINIC.holidayHours : (CLINIC.hours[w] || [])).length || CLINIC.closed.includes(ymd(d));
+      const note = i === 0 ? '今日' : open ? '' : closedDay ? '休診' : all.length ? '満' : '受付終了';
+      html += `<label class="${cls}"><input type="radio" name="date" id="d${i}" value="${i}"${open ? '' : ' disabled'}${String(i) === selDate ? ' checked' : ''} aria-label="${mm + 1}月${dn}日（${W[w]}）${note}"><span><span class="d">${dn}</span>${note ? `<span class="x">${note}</span>` : ''}</span></label>`;
+    }
+    $('days').innerHTML = html;
+  }
+  $('calPrev').addEventListener('click', () => { if (calMonth > 0) { calMonth--; buildDays(); } });
+  $('calNext').addEventListener('click', () => { if (calMonth < months.length - 1) { calMonth++; buildDays(); } });
+  buildDays();
+  function renderSlots() {
+    const i = selDate; if (i === '') return;
+    const groups = slotsFor(dates[Number(i)]);
+    if (!groups.length) { $('slots').innerHTML = '<p class="empty">この日はもう予約できる時間がありません。別の日を選んでください。</p>'; return; }
+    const sd = dates[Number(i)], picked = radio('time');
+    if (!groups.some((g) => g.some((m) => !isBusy(sd, m)))) { $('slots').innerHTML = '<p class="empty">この日は予約が埋まっています。別の日を選んでください。</p>'; return; }
+    $('slots').innerHTML = `<p class="picked-when">${sd.getMonth() + 1}月${sd.getDate()}日（${W[sd.getDay()]}）の時間</p>` + groups.map((g, gi) => `<p class="slots-title">${g.name}</p><div class="slots">${g.map((m) => (isBusy(sd, m) ? `<label class="chip busy"><input type="radio" disabled aria-label="${fromMin(m)} 埋まっています"><span>${fromMin(m)}</span></label>` : `<label class="chip"><input type="radio" name="time" id="tm${gi}-${m}" value="${fromMin(m)}"${picked === fromMin(m) ? ' checked' : ''}><span>${fromMin(m)}</span></label>`)).join('')}</div>`).join('');
+  }
+  const whenText = () => { const i = selDate; if (i === '') return ''; const d = dates[Number(i)]; return `${d.getMonth() + 1}月${d.getDate()}日（${W[d.getDay()]}）${radio('time')}`; };
+
+  // ---- 予約台帳の空き状況（埋まっている時間は押せなくする）----
+  const hm2 = (m) => `${pad(Math.floor(m / 60))}:${pad(m % 60)}`;
+  const needMin = () => (radio('visit') === '再診' ? DUR.re : DUR.new);
+  function isBusy(d, m) {
+    if (!BUSY) return false;
+    const list = BUSY[ymd(d)];
+    if (!list) return false;
+    if (list.includes('全日')) return true;
+    for (let t = m; t < m + needMin(); t += CLINIC.stepMin) if (list.includes(hm2(t))) return true;
+    return false;
+  }
+  function showBusyNote() {
+    const n = $('busyNote');
+    if (busyState === 'loading') { n.textContent = '空き状況を確認しています…'; n.hidden = false; }
+    else if (busyState === 'error') { n.textContent = '空き状況を読み込めませんでした。表示されている時間でも、埋まっている場合があります（院からの返信で確定します）。'; n.hidden = false; }
+    else if (busyState === 'ok') { n.textContent = '線が引かれた時間は、ほかの予約で埋まっています。'; n.hidden = false; }
+    else n.hidden = true;
+  }
+  function loadBusy() {
+    if (!CLINIC.sheetUrl || busyState === 'loading') return;
+    busyState = 'loading'; showBusyNote();
+    fetch(CLINIC.sheetUrl + (CLINIC.sheetUrl.includes('?') ? '&' : '?') + 't=' + Date.now())
+      .then((r) => r.json())
+      .then((j) => {
+        if (!j || !j.ok) throw new Error('ng');
+        BUSY = j.busy || {};
+        if (j.durNew > 0) DUR.new = j.durNew;
+        if (j.durReg > 0) DUR.re = j.durReg;
+        if (j.step > 0) CLINIC.stepMin = j.step;
+        busyState = 'ok';
+      })
+      .catch(() => { BUSY = null; busyState = 'error'; })
+      .finally(() => { buildDays(); renderSlots(); showBusyNote(); });
+  }
+
+  // 再診の簡易部位
+  $('reAreas').innerHTML = ['首', '肩・肩甲骨', '背中', '腰', 'お尻・股関節', '腕・肘', '手首・手', '太もも', '膝', 'ふくらはぎ・すね', '足首・足', '頭・顔', '全身'].map((n, i) => `<label class="chip"><input type="checkbox" name="reArea" id="ra${i}" value="${n}"><span>${n}</span></label>`).join('');
+  $('reSide').innerHTML = '<span class="hint" style="align-self:center">左右</span>' + ['右', '左', '両方', '真ん中・なし'].map((n, i) => `<label class="chip"><input type="radio" name="reSide" id="rs${i}" value="${n}"><span>${n}</span></label>`).join('');
+  $('soonLine').href = `https://line.me/R/oaMessage/${encodeURIComponent(CLINIC.lineId)}/?${encodeURIComponent('【当日・1時間以内の来院希望】\nお名前：\n来院したい時間：\n施術してほしい場所：')}`;
+  $('soonTel').href = 'tel:' + CLINIC.tel.replace(/[^0-9]/g, ''); $('soonTel').textContent = '電話する';
+
+  // ---- 連動 ----
+  const TRAUMA = ['ひねった', '打った・ぶつけた', '転んだ・落ちた', '重い物を持った・急に伸ばした'];
+  function sync() {
+    $('reNewBlock').hidden = radio('reWhat') !== '別の場所が痛い・新しいケガ';
+  }
+  function clearInvalid(el) { const f = el.closest('.invalid'); if (f) f.classList.remove('invalid'); }
+  form.addEventListener('change', (e) => {
+    if (e.target.name === 'date') { selDate = e.target.value; renderSlots(); }
+    if (e.target.name === 'visit' && cur === 'visit') { renderProgress(); setTimeout(() => form.requestSubmit ? form.requestSubmit() : null, 180); }
+    sync(); clearInvalid(e.target);
+  });
+  form.addEventListener('input', (e) => clearInvalid(e.target));
+
+  // ---- 入力チェック ----
+  function filled(key) {
+    switch (key) {
+      case 'reName': return val(key) !== '';
+      case 'date': return selDate !== '';
+      case 'reArea': return checks('reArea').length > 0 || val('reAreaOther') !== '';
+      default: return radio(key) !== '';
+    }
+  }
+  function validate(step) {
+    let first = null;
+    document.querySelector(`.step[data-step="${step}"]`).querySelectorAll('[data-required]').forEach((el) => {
+      if (el.hidden || el.closest('[hidden]')) { el.classList.remove('invalid'); return; }
+      const ok = filled(el.dataset.required); el.classList.toggle('invalid', !ok); if (!ok && !first) first = el;
+    });
+    if (first) { $('errMsg').textContent = '赤枠のところを選んでください。'; $('errMsg').hidden = false; first.scrollIntoView({ behavior: 'smooth', block: 'center' }); return false; }
+    $('errMsg').hidden = true; return true;
+  }
+
+  // ---- 画面切り替え ----
+  function renderProgress() {
+    const f = flow(), idx = f.indexOf(cur);
+    $('progress').innerHTML = f.map((_, i) => `<span class="${i <= idx ? 'on' : ''}"></span>`).join('');
+    $('stepLabel').textContent = `ステップ ${idx + 1} / ${f.length}　${LABEL[cur]}`;
+  }
+  function go(step) {
+    cur = step;
+    if (step === 'when') loadBusy();
+    document.querySelectorAll('.step').forEach((s) => { s.hidden = s.dataset.step !== step; });
+    const f = flow(), idx = f.indexOf(step);
+    $('backBtn').hidden = idx === 0;
+    $('nextBtn').hidden = step === 'confirm' || step === 'intake';
+    $('backBtn').hidden = idx === 0 || step === 'intake';
+    if (step === 'intake') renderMQ();
+    $('nextBtn').textContent = f[idx + 1] === 'confirm' ? '確認へ' : '次へ';
+    $('errMsg').hidden = true;
+    if (step === 'confirm') buildConfirm();
+    renderProgress();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  $('backBtn').addEventListener('click', () => { const f = flow(); go(f[f.indexOf(cur) - 1]); });
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (cur === 'intake') return;
+    if (!validate(cur)) return;
+    const f = flow(); go(f[f.indexOf(cur) + 1]);
+  });
+
+  // ---- 問診票（共通部品）----
+  function renderMQ() { $('mq').innerHTML = mqRender(); }
+  MQ.opts = { mode: 'remote', rerender: renderMQ,
+    onBackFirst: () => go('when'),
+    onDone: () => go('confirm') };
+  $('mq').addEventListener('click', (e) => { mqClick(e); });
+  $('mq').addEventListener('input', (e) => { mqInput(e); });
+  $('mq').addEventListener('change', (e) => { if (e.target.dataset && e.target.dataset.in === 'birth') renderMQ(); });
+  $('mq').addEventListener('keydown', (e) => { const el = e.target.closest('[data-part],[data-finger]'); if (el && el.tagName !== 'BUTTON' && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); el.dispatchEvent(new MouseEvent('click', { bubbles: true })); } });
+  // 確認画面から「戻る」で問診票の最後のページへ
+  $('backBtn').addEventListener('click', (e) => { if (cur === 'confirm' && radio('visit') === '初診') { e.stopImmediatePropagation(); MQ.pstep = MQ.pa.paper === '1' ? 0 : mqPages().length - 1; go('intake'); } }, true);
+
+  // ---- 送信文面 ----
+  const FEEL = { '1': 'じっとしていても強く痛む', '3': '動かすと強く痛む', '4': '動かすと痛い', '5': '時々痛い・重い', '6': '痛みはないが体を見てほしい' };
+  const j = (a) => (a && a.length ? a.join('、') : '—');
+  function ageOf(b) { if (!b) return null; const d = new Date(b), n = new Date(); if (isNaN(d)) return null; let a = n.getFullYear() - d.getFullYear(); if (n.getMonth() < d.getMonth() || (n.getMonth() === d.getMonth() && n.getDate() < d.getDate())) a--; return a; }
+  let text = '', chatText = '', lastRv = null, sentId = '';  // text：予約台帳に送る全文（院のシステム用のデータ入り）／chatText：LINEのトークに送る文（データの行を除く）
+  let lineIdt = ''; // LINEの中で開いたときの本人確認（前日のお知らせを自動で送るため）
+  function buildConfirm() {
+    const isNew = radio('visit') === '初診';
+    const when = whenText(), flex = radio('flex');
+    let rows, lines, rv = {}, dirHTML = '';
+    if (isNew) {
+      const P = MQ.pa, paper = P.paper === '1';
+      const a = ageOf(P.birth);
+      const head = P.history === '初めて' ? '【Web予約・初診】' : P.history ? '【Web予約・1か月以上ぶり（初検扱い）】' : '【Web予約・初診／1か月以上ぶり】';
+      if (paper) {
+        rows = [['日時', when, 'when'], ['', flex], ['問診票', '来院時にタブレットで記入（難しい方は紙）']];
+        lines = [head, `希望日時：${when}（${flex}）`, '問診票：来院時にタブレットで記入（難しい方は紙）'];
+        rv = { type: 'new', paper: 1 };
+      } else {
+        rows = [['日時', when, 'when'], ['', flex], ...mqSummaryLines(P).slice(0, 12)];
+        const sum = mqSummaryLines(P).filter(([k]) => ['氏名','電話','住所','医療費助成','場所','状態','いつから','原因','危険サイン','施術の注意'].includes(k));
+        lines = [head, `希望日時：${when}（${flex}）`, ...sum.map(([k, v]) => `${k}：${v}`), '',
+          '▼問診票データ（院のシステム用・消さずにそのまま送ってください）',
+          `[[MQ:${mqEncode(P)}]]`];
+        const g = mqJudge(P), main = mainPartOf(P);
+        rv = { type: P.history === '初めて' ? 'new' : 'back', name: P.name, kana: P.kana, tel: P.tel, age: ageOf(P.birth), sex: P.sex || '', car: P.where === '交通事故' ? 1 : 0,
+          place: [...(P.parts || []), P.areaOther].filter(Boolean).join('、') + (main && P.parts.length > 1 ? `（主：${main}）` : ''),
+          what: `${(SINCE.find((x) => x[0] === P.since) || [, , ''])[1]}・${P.how || ''}${P.where ? '（' + P.where + '）' : ''}　痛み${P.nprs ?? '—'}/10`,
+          goal: (GOAL.find((x) => x[0] === P.goal) || [, ''])[1], track: g ? g.track : '', menu: g ? g.menu + (g.note ? '（' + g.note + '）' : '') : '',
+          flag: PT_RF.some((f) => P[f.id] === 'y') ? 1 : 0, care: (P.safety || []).filter((v) => v !== '特になし').join('、'), note: P.request || '' };
+        const dir = mqDirection(P); rv.dir = dir.steps.join('／') + (dir.care.length ? '｜' + dir.care.join('／') : '');
+        dirHTML = `<h3>ご回答から考えられる施術の進め方（目安）</h3><ul>${dir.steps.map((s) => `<li>${s}</li>`).join('')}${dir.care.map((s) => `<li>${s}</li>`).join('')}</ul><p>${MQ_FIRST_VISIT}</p>`;
+      }
+    } else {
+      const side = radio('reSide');
+      const place = [(side && side !== '真ん中・なし' ? side + '：' : '') + j(checks('reArea')), val('reAreaOther')].filter((x) => x && x !== '—').join('／');
+      const what = radio('reWhat'), newNote = !$('reNewBlock').hidden ? val('reNewNote') : '';
+      rows = [['日時', when, 'when'], ['', flex], ['区分', '通院中'], ['お名前', val('reName')], val('reTel') ? ['電話', val('reTel')] : null, ['施術の場所', place], ['今回', what], newNote ? ['いつ・何をして', newNote] : null, val('reNote') ? ['伝えたいこと', val('reNote')] : null].filter(Boolean);
+      lines = [
+        '【Web予約・通院中】',
+        `希望日時：${when}（${flex}）`,
+        `お名前：${val('reName')}`,
+        val('reTel') ? `電話：${val('reTel')}` : null,
+        `施術の場所：${place}`,
+        `今回：${what}`,
+        newNote ? `いつ・何をして：${newNote}` : null,
+        val('reNote') ? `伝えたいこと：${val('reNote')}` : null
+      ];
+      rv = { type: 're', name: val('reName'), tel: val('reTel'), place, what: what + (newNote ? `（${newNote}）` : ''), note: val('reNote') };
+    }
+    const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    $('confirmList').innerHTML = rows.map(([k, v, c]) => `<dt>${esc(k)}</dt><dd${c ? ` class="${c}"` : ''}>${esc(v)}</dd>`).join('');
+    const di = selDate, dd = di === '' ? null : dates[Number(di)];
+    Object.assign(rv, { v: 1, date: dd ? `${dd.getFullYear()}-${String(dd.getMonth() + 1).padStart(2, '0')}-${String(dd.getDate()).padStart(2, '0')}` : '', time: radio('time'), flex });
+    lines.push('', `[[RV:${window.LZString ? 'L' + LZString.compressToEncodedURIComponent(JSON.stringify(rv)) : 'J' + encodeURIComponent(JSON.stringify(rv))}]]`);
+    text = lines.filter((x) => x !== null).join('\n');
+    chatText = lines.filter((x) => x !== null && !/^\[\[(MQ|RV):/.test(x) && !/^▼問診票データ/.test(x)).join('\n').replace(/\n{3,}/g, '\n\n').trim();
+    lastRv = Object.assign({}, rv, { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8) });
+    $('summary').textContent = chatText;
+    $('lineBtn').href = `https://line.me/R/oaMessage/${encodeURIComponent(CLINIC.lineId)}/?${encodeURIComponent(chatText)}`;
+    $('copyMsg').hidden = true;
+    $('dirBox').innerHTML = dirHTML; $('dirBox').hidden = !dirHTML;
+  }
+  // ---- 予約台帳にも同じ予約を入れる（LINEのWebhookは使わないので、Lステップには影響しない）----
+  function sendToSheet() {
+    if (!CLINIC.sheetUrl || !lastRv || sentId === lastRv.id) return;
+    sentId = lastRv.id;
+    const body = JSON.stringify({ kind: 'web-booking', rv: lastRv, text: text.slice(0, 20000), idt: lineIdt });
+    try {
+      if (navigator.sendBeacon && navigator.sendBeacon(CLINIC.sheetUrl, new Blob([body], { type: 'text/plain;charset=UTF-8' }))) return;
+    } catch (err) {}
+    try { fetch(CLINIC.sheetUrl, { method: 'POST', mode: 'no-cors', keepalive: true, headers: { 'Content-Type': 'text/plain;charset=UTF-8' }, body }); } catch (err) {}
+  }
+  $('lineBtn').addEventListener('click', sendToSheet, true);
+  $('copyBtn').addEventListener('click', sendToSheet, true);
+  $('copyBtn').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(chatText); $('copyMsg').textContent = `コピーしました。LINEで「${CLINIC.lineId}」のトークに貼り付けて送信してください。`; }
+    catch (err) { const r = document.createRange(); r.selectNodeContents($('summary')); $('summary').closest('details').open = true; const s = getSelection(); s.removeAllRanges(); s.addRange(r); $('copyMsg').textContent = '文面を選択しました。長押しでコピーしてください。'; }
+    $('copyMsg').hidden = false;
+  });
+
+  // ---- LIFF：LINEの中で開いたときは、ボタン1つでトークに送信 ----
+  let inLiff = false;
+  if (window.liff) {
+    liff.init({ liffId: CLINIC.liffId }).then(() => {
+      // 先に本人確認の情報（IDトークン）を受け取る。isApiAvailable('sendMessages') は今のLIFFでは使えない名前でエラーになり、
+      // そこで止まってIDトークンも受け取れていなかった（2026-11-23 直し）。トークへの送信は、LINEの中で開いていれば使える
+      try { if (liff.isLoggedIn()) lineIdt = liff.getIDToken() || ''; } catch (err) { lineIdt = ''; }
+      inLiff = liff.isInClient();
+      if (inLiff) $('copyRow').hidden = true;
+      // 確認用（URLに ?diag=1 を付けて開いたときだけ）：LINEの本人確認の情報が取れているかを画面の上に出す
+      try {
+        if (/[?&]diag=1/.test(location.search + decodeURIComponent(new URLSearchParams(location.search).get('liff.state') || ''))) {
+          let exp = '', aud = '';
+          try { const d = liff.getDecodedIDToken(); if (d) { exp = new Date(d.exp * 1000).toLocaleString('ja-JP'); aud = d.aud; } } catch (e) { exp = 'エラー'; }
+          let scope = '';
+          try { scope = (liff.getContext() || {}).scope ? liff.getContext().scope.join(', ') : '（なし）'; } catch (e) { scope = 'エラー'; }
+          const box = document.createElement('pre');
+          box.style.cssText = 'white-space:pre-wrap;background:#fff3cd;border:2px solid #e8650f;padding:10px;margin:10px;font-size:13px';
+          box.textContent = '【確認用】\nLINEの中で開いている：' + liff.isInClient() + '\nログイン：' + liff.isLoggedIn() +
+            '\n本人確認の情報（IDトークン）：' + (lineIdt ? 'あり（' + lineIdt.length + '文字）' : 'なし') +
+            '\nIDトークンの期限：' + (exp || '—') + '\nチャネルID：' + (aud || '—') + '\n許可されている範囲：' + scope +
+            '\nLIFF ID：' + CLINIC.liffId + '\n今の時刻：' + new Date().toLocaleString('ja-JP');
+          document.body.prepend(box);
+        }
+      } catch (e) {}
+    }).catch((err) => {
+      inLiff = false;
+      try { if (/diag=1/.test(location.href)) { const box = document.createElement('pre'); box.style.cssText = 'background:#fdecea;padding:10px;margin:10px'; box.textContent = '【確認用】LIFFの準備でエラー：' + (err && (err.code + ' ' + err.message)); document.body.prepend(box); } } catch (e) {}
+    });
+  }
+  $('lineBtn').addEventListener('click', async (e) => {
+    if (!inLiff) return; // LINEの外で開いたときは、トークに文面を入れるリンクとして動く
+    e.preventDefault();
+    const btn = $('lineBtn'); btn.textContent = '送信中…'; btn.style.pointerEvents = 'none'; $('sendErr').hidden = true;
+    try {
+      await liff.sendMessages([{ type: 'text', text: chatText }]);
+      form.hidden = true; $('done').hidden = false; window.scrollTo({ top: 0 });
+      setTimeout(() => { try { liff.closeWindow(); } catch (err) {} }, 1800);
+    } catch (err) {
+      btn.textContent = 'LINEで予約を送る'; btn.style.pointerEvents = '';
+      $('sendErr').textContent = '送信できませんでした。もう一度押すか、下のボタンで内容をコピーしてトークに貼り付けてください。';
+      $('sendErr').hidden = false; $('copyRow').hidden = false;
+    }
+  });
+
+  go('visit'); sync();
+})();
+</script>
+<script>
+/* 通い方ナビの「このメニューで予約する」から開いたとき（?menu=…）：上にご希望のメニューを出し、「伝えておきたいこと」に入れておく（v1・2026-11-22） */
+(function () {
+  function param(k) {
+    const q = new URLSearchParams(location.search);
+    let v = q.get(k) || '';
+    if (!v && q.get('liff.state')) { try { v = new URLSearchParams(decodeURIComponent(q.get('liff.state')).replace(/^[^?]*\?/, '')).get(k) || ''; } catch (e) { v = ''; } }
+    return v;
+  }
+  const menu = param('menu').replace(/[<>"&]/g, '').slice(0, 40);
+  if (!menu) return;
+  const note = 'ご希望のメニュー：' + menu + '（通い方ナビから）';
+  const box = document.createElement('p');
+  box.className = 'notice info';
+  box.style.margin = '14px 0 0';
+  box.innerHTML = '<b>ご希望のメニュー：' + menu + '</b><br>当日、お体の状態を確かめてから、最終的なメニューを一緒に決めます。';
+  const form = document.getElementById('form');
+  if (form) form.parentNode.insertBefore(box, form);
+  const re = document.getElementById('reNote');
+  if (re && !re.value) re.value = note;
+  if (typeof MQ !== 'undefined' && MQ.pa && !MQ.pa.request) MQ.pa.request = note;
+})();
+</script>
+</body>
+</html>
